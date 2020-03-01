@@ -1,9 +1,10 @@
 import { UnitAst, FunctionAst, ExpressionAst } from "./interpreter/parse";
+import { nullthrows } from "./interpreter/nullthrows";
 
 type Bitsize = 8 | 16 | 32;
-export type Type =
-  | { type: "string" }
-  | { type: "integer"; signed: boolean; bitsize: Bitsize };
+type Named = { name: string };
+export type Type = Named &
+  ({ type: "string" } | { type: "integer"; signed: boolean; bitsize: Bitsize });
 export type Function = {
   return_expression: Expression | null;
   return_type_id: number;
@@ -49,19 +50,19 @@ class Analyser {
 
   constructor() {
     this.builtins = {
-      str: this.register_builtin_type("str", { type: "string" }),
-      u8: this.register_builtin_type("u8", int_type(false, 8)),
-      u16: this.register_builtin_type("u16", int_type(false, 16)),
-      u32: this.register_builtin_type("u32", int_type(false, 32)),
-      i8: this.register_builtin_type("i8", int_type(true, 8)),
-      i16: this.register_builtin_type("i16", int_type(true, 16)),
-      i32: this.register_builtin_type("i32", int_type(true, 32))
+      str: this.register_builtin_type({ type: "string", name: "str" }),
+      u8: this.register_builtin_type(int_type("u8", false, 8)),
+      u16: this.register_builtin_type(int_type("u16", false, 16)),
+      u32: this.register_builtin_type(int_type("u32", false, 32)),
+      i8: this.register_builtin_type(int_type("i8", true, 8)),
+      i16: this.register_builtin_type(int_type("i16", true, 16)),
+      i32: this.register_builtin_type(int_type("i32", true, 32))
     };
   }
 
-  register_builtin_type(name: string, type: Type) {
+  register_builtin_type(type: Type) {
     const id = ++this.next_ID;
-    this.types_by_name.set(name, id);
+    this.types_by_name.set(type.name, id);
     this.types.set(id, type);
     return id;
   }
@@ -81,7 +82,13 @@ class Analyser {
     const return_expression = this.analyse_expression(func.return_expression);
 
     if (return_expression && return_expression.type_id !== return_type_id) {
-      throw new Error("return expression does not have correct type");
+      const expected_type = nullthrows(this.types.get(return_type_id)).name;
+      const actual_type = nullthrows(this.types.get(return_expression.type_id))
+        .name;
+      throw new Error(
+        `expected return expression to be of type "${expected_type}", ` +
+          `but got type "${actual_type}"`
+      );
     }
 
     return { return_type_id, return_expression };
@@ -102,6 +109,6 @@ class Analyser {
   }
 }
 
-function int_type(signed: boolean, bitsize: Bitsize): Type {
-  return { type: "integer", signed, bitsize };
+function int_type(name: string, signed: boolean, bitsize: Bitsize): Type {
+  return { type: "integer", name, signed, bitsize };
 }

@@ -1,10 +1,6 @@
 import { parse } from "./parse";
 import { analyse, Expression } from "../analyse";
-
-function nullthrows<T>(x: T | null | undefined): T {
-  if (x == null) throw new Error("unexpected null");
-  return x;
-}
+import { nullthrows } from "./nullthrows";
 
 export function run(sourceCode: string, element: HTMLElement) {
   const ast = parse(sourceCode);
