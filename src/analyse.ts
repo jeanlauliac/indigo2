@@ -1,6 +1,9 @@
 import { UnitAst, FunctionAst, ExpressionAst } from "./interpreter/parse";
 
-export type Type = { type: "string" };
+type Bitsize = 8 | 16 | 32;
+export type Type =
+  | { type: "string" }
+  | { type: "integer"; signed: boolean; bitsize: Bitsize };
 export type Function = {
   return_expression: Expression | null;
   return_type_id: number;
@@ -34,11 +37,25 @@ class Analyser {
   types_by_name = new Map();
   types: Map<number, Type> = new Map();
   functions: Map<number, Function> = new Map();
-  builtins: { str: number };
+  builtins: {
+    str: number;
+    u8: number;
+    u16: number;
+    u32: number;
+    i8: number;
+    i16: number;
+    i32: number;
+  };
 
   constructor() {
     this.builtins = {
-      str: this.register_builtin_type("str", { type: "string" })
+      str: this.register_builtin_type("str", { type: "string" }),
+      u8: this.register_builtin_type("u8", int_type(false, 8)),
+      u16: this.register_builtin_type("u16", int_type(false, 16)),
+      u32: this.register_builtin_type("u32", int_type(false, 32)),
+      i8: this.register_builtin_type("i8", int_type(true, 8)),
+      i16: this.register_builtin_type("i16", int_type(true, 16)),
+      i32: this.register_builtin_type("i32", int_type(true, 32))
     };
   }
 
@@ -80,7 +97,11 @@ class Analyser {
 
   resolve_type(name: string): number {
     const type = this.types_by_name.get(name);
-    if (type == null) throw new Error(`cannot find type "${name}"`);
+    if (type == null) throw new Error(`unknown type "${name}"`);
     return type;
   }
+}
+
+function int_type(signed: boolean, bitsize: Bitsize): Type {
+  return { type: "integer", signed, bitsize };
 }
