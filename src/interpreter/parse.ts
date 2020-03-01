@@ -10,27 +10,31 @@ import { IndigoError } from "./IndigoError";
 
 export type FunctionAst = {
   name: string;
-  statements: Statement[];
+  statements: StatementAst[];
   location: Location;
+  return_expression: ExpressionAst | null;
+  return_type: string;
 };
 
-export type Statement = {
-  type: "return";
-  expression: Expression;
-  location: Location;
-};
+export type StatementAst =
+  | {
+      type: "return";
+      expression: ExpressionAst;
+      location: Location;
+    }
+  | { type: "expression"; expression: ExpressionAst };
 
-export type Expression = {
+export type ExpressionAst = {
   type: "string";
   value: string;
   location: Location;
 };
 
-export type Ast = {
+export type UnitAst = {
   functions: FunctionAst[];
 };
 
-export function parse(sourceCode: string): Ast {
+export function parse(sourceCode: string): UnitAst {
   const parser = new Parser(sourceCode);
   return parser.parse_unit();
 }
@@ -60,7 +64,6 @@ class Parser {
     const functions: FunctionAst[] = [];
 
     while (this.token.type !== "end") {
-      while (this.token.type === "newline") this.nextt();
       let fn = this.parse_function();
       if (fn != null) {
         functions.push(fn);
@@ -81,28 +84,45 @@ class Parser {
     this.nextt();
     if (!this.has_op(")")) throw this.token_err('expected operator ")"');
     this.nextt();
+    if (!this.has_op("->")) throw this.token_err('expected operator "->"');
+    this.nextt();
+
+    const return_type = this.get_identifier();
+    this.nextt();
+
     if (!this.has_op("{")) throw this.token_err('expected operator "{"');
     this.nextt();
 
-    const statements = [];
+    const statements: StatementAst[] = [];
+    let return_expression = null;
+
     while (this.token.type !== "end" && !this.has_op("}")) {
-      if (this.token.type === "newline") {
+      let statement;
+      if ((statement = this.parse_return())) {
+        if (!this.has_op(";")) throw this.token_err('expected operator ";"');
         this.nextt();
+        statements.push(statement);
         continue;
       }
 
-      let statement;
-      if ((statement = this.parse_return())) statements.push(statement);
-      else throw this.token_err("unexpected token");
+      const expression = this.parse_expression();
+      if (expression == null) throw this.token_err("unexpected token");
+
+      if (this.has_op(";")) {
+        this.nextt();
+        statements.push({ type: "expression", expression });
+      } else if (this.has_op("}")) {
+        return_expression = expression;
+      }
     }
 
     if (!this.has_op("}")) throw this.token_err('expected operator "}"');
     this.nextt();
 
-    return { name, statements, location };
+    return { name, statements, location, return_type, return_expression };
   }
 
-  parse_return(): Statement | null {
+  parse_return(): StatementAst | null {
     if (!this.has_kw("return")) return null;
     const location = this.token.location;
     this.nextt();
@@ -113,7 +133,7 @@ class Parser {
     return { type: "return", expression, location };
   }
 
-  parse_expression(): Expression | null {
+  parse_expression(): ExpressionAst | null {
     if (this.token.type === "string") {
       const { value, location } = this.token;
       this.nextt();
@@ -132,10 +152,6 @@ class Parser {
     const location = this.loc();
     if (this.eos()) {
       return { type: "end", location };
-    }
-    if (this.chr() === "\n") {
-      this.forward();
-      return { type: "newline", location };
     }
     let token: Token | null;
     if ((token = this.parse_ident_or_keyword())) return token;
@@ -161,7 +177,7 @@ class Parser {
   }
 
   discard_whitespace() {
-    while (!this.eos() && /^[ \t]$/.test(this.chr())) this.forward();
+    while (!this.eos() && /^[ \t\n]$/.test(this.chr())) this.forward();
   }
 
   parse_ident_or_keyword(): Token | null {
@@ -259,7 +275,7 @@ class Parser {
 }
 
 function is_alpha(char: string) {
-  return /^[a-zA-Z_-]$/.test(char);
+  return /^[a-zA-Z_]$/.test(char);
 }
 
 function is_numeric(char: string) {
