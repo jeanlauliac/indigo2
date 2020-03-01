@@ -1,12 +1,12 @@
 import { UnitAst, FunctionAst, ExpressionAst } from "./interpreter/parse";
 
-type Type = { type: "string" };
-type Function = {
+export type Type = { type: "string" };
+export type Function = {
   return_expression: Expression | null;
   return_type_id: number;
 };
 
-type Expression = {
+export type Expression = {
   ast: ExpressionAst;
   type_id: number;
 };
@@ -17,7 +17,7 @@ type Graph = {
   entry_point_id: number;
 };
 
-export function analyse(unit: UnitAst) {
+export function analyse(unit: UnitAst): Graph {
   const al = new Analyser();
   al.analyse_unit(unit);
 
@@ -75,7 +75,7 @@ class Analyser {
     if (exp.type === "string") {
       return { ast: exp, type_id: this.builtins.str };
     }
-    throw new Error("unknown expression");
+    throw new Error("unknown expression type");
   }
 
   resolve_type(name: string): number {
