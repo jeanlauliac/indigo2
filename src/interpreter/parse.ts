@@ -157,6 +157,7 @@ class Parser {
     if ((token = this.parse_ident_or_keyword())) return token;
     if ((token = this.parse_operator())) return token;
     if ((token = this.parse_string())) return token;
+    if ((token = this.parse_number())) return token;
 
     throw new Error(`unexpected character "${this.chr()}"`);
   }
@@ -226,6 +227,18 @@ class Parser {
         location
       });
     return { type: "string", value, location };
+  }
+
+  parse_number(): Token | null {
+    if (!is_numeric(this.chr())) return null;
+    const location = this.loc();
+    this.forward();
+    let value = "";
+    while (!this.eos() && is_numeric(this.chr())) {
+      value += this.chr();
+      this.forward();
+    }
+    return { type: "number", value, location };
   }
 
   private has_kw(value: Keyword) {

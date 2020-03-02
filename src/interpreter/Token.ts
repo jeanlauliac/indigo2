@@ -36,6 +36,7 @@ export type Token = Locatable &
         type: "string";
         value: string;
       }
+    | { type: "number"; value: string }
     | {
         type: "keyword";
         value: Keyword;

@@ -1,5 +1,6 @@
 import { UnitAst, FunctionAst, ExpressionAst } from "./interpreter/parse";
 import { nullthrows } from "./interpreter/nullthrows";
+import { exhaustive } from "./exhaustive";
 
 type Bitsize = 8 | 16 | 32;
 type Named = { name: string };
@@ -96,10 +97,12 @@ class Analyser {
 
   analyse_expression(exp: ExpressionAst | null): Expression | null {
     if (exp == null) return null;
-    if (exp.type === "string") {
-      return { ast: exp, type_id: this.builtins.str };
+    switch (exp.type) {
+      case "string":
+        return { ast: exp, type_id: this.builtins.str };
+      default:
+        exhaustive(exp.type);
     }
-    throw new Error("unknown expression type");
   }
 
   resolve_type(name: string): number {

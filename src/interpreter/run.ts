@@ -1,6 +1,7 @@
 import { parse } from "./parse";
 import { analyse, Expression } from "../analyse";
 import { nullthrows } from "./nullthrows";
+import { exhaustive } from "../exhaustive";
 
 export function run(sourceCode: string, element: HTMLElement) {
   const ast = parse(sourceCode);
@@ -22,8 +23,11 @@ export function run(sourceCode: string, element: HTMLElement) {
 }
 
 function evaluate_expression(exp: Expression) {
-  if (exp.ast.type === "string") {
-    return exp.ast.value;
+  const { ast } = exp;
+  switch (ast.type) {
+    case "string":
+      return exp.ast.value;
+    default:
+      exhaustive(ast.type);
   }
-  throw new Error("unknown expression type");
 }
