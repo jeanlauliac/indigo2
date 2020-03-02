@@ -1,3 +1,9 @@
+//fn main() -> str {
+//  "hello, world"
+//}
+
 fn main() -> str {
-  "count: "
+  let count = 0;
+  // <button onpress={ || ++count }>Count: { count }</button>
+  "hello"
 }

@@ -22,6 +22,7 @@ export type StatementAst =
       expression: ExpressionAst;
       location: Location;
     }
+  | { type: "let"; initial_value: ExpressionAst; name: string }
   | { type: "expression"; expression: ExpressionAst };
 
 export type ExpressionAst =
@@ -105,7 +106,7 @@ class Parser {
 
     while (this.token.type !== "end" && !this.has_op("}")) {
       let statement;
-      if ((statement = this.parse_return())) {
+      if ((statement = this.parse_statement())) {
         if (!this.has_op(";")) throw this.token_err('expected operator ";"');
         this.nextt();
         statements.push(statement);
@@ -129,15 +130,38 @@ class Parser {
     return { name, statements, location, return_type, return_expression };
   }
 
+  parse_statement(): StatementAst | null {
+    let statement;
+    if ((statement = this.parse_return())) return statement;
+    if ((statement = this.parse_let())) return statement;
+
+    return statement;
+  }
+
   parse_return(): StatementAst | null {
     if (!this.has_kw("return")) return null;
-    const location = this.token.location;
+    const { location } = this.token;
     this.nextt();
 
     const expression = this.parse_expression();
     if (expression == null) throw this.token_err("expected expression");
 
     return { type: "return", expression, location };
+  }
+
+  parse_let(): StatementAst | null {
+    if (!this.has_kw("let")) return null;
+    this.nextt();
+
+    const name = this.get_identifier();
+    this.nextt();
+    if (!this.has_op("=")) throw this.token_err('expected operator "="');
+    this.nextt();
+
+    const initial_value = this.parse_expression();
+    if (initial_value == null) throw this.token_err("expected expression");
+
+    return { type: "let", name, initial_value };
   }
 
   parse_expression(): ExpressionAst | null {

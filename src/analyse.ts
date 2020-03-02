@@ -5,7 +5,12 @@ import { exhaustive } from "./exhaustive";
 type Bitsize = 8 | 16 | 32;
 type Named = { name: string };
 export type Type = Named &
-  ({ type: "string" } | { type: "integer"; signed: boolean; bitsize: Bitsize });
+  (
+    | { type: "string" }
+    | { type: "integer"; signed: boolean; bitsize: Bitsize }
+    | { type: "element" }
+  );
+
 export type Function = {
   return_expression: Expression | null;
   return_type_id: number;
@@ -20,6 +25,10 @@ type Graph = {
   types: Map<number, Type>;
   functions: Map<number, Function>;
   entry_point_id: number;
+};
+
+type ExpressionContext = {
+  type_hint_id: number | null;
 };
 
 export function analyse(unit: UnitAst): Graph {
@@ -47,6 +56,7 @@ class Analyser {
     i8: number;
     i16: number;
     i32: number;
+    elem: number;
   };
 
   constructor() {
@@ -57,7 +67,8 @@ class Analyser {
       u32: this.register_builtin_type(int_type("u32", false, 32)),
       i8: this.register_builtin_type(int_type("i8", true, 8)),
       i16: this.register_builtin_type(int_type("i16", true, 16)),
-      i32: this.register_builtin_type(int_type("i32", true, 32))
+      i32: this.register_builtin_type(int_type("i32", true, 32)),
+      elem: this.register_builtin_type({ type: "element", name: "elem" })
     };
   }
 
@@ -80,7 +91,9 @@ class Analyser {
 
   analyse_function(func: FunctionAst): Function {
     const return_type_id = this.resolve_type(func.return_type);
-    const return_expression = this.analyse_expression(func.return_expression);
+    const return_expression = this.analyse_expression(func.return_expression, {
+      type_hint_id: return_type_id
+    });
 
     if (return_expression && return_expression.type_id !== return_type_id) {
       const expected_type = nullthrows(this.types.get(return_type_id)).name;
@@ -95,14 +108,17 @@ class Analyser {
     return { return_type_id, return_expression };
   }
 
-  analyse_expression(exp: ExpressionAst | null): Expression | null {
+  analyse_expression(
+    exp: ExpressionAst | null,
+    context: ExpressionContext
+  ): Expression | null {
     if (exp == null) return null;
     switch (exp.type) {
       case "string":
         return { type: "string", ast: exp, type_id: this.builtins.str };
 
       case "number": {
-        let type_id = null;
+        let type_id = context.type_hint_id;
         if (exp.data_type != null) type_id = this.resolve_type(exp.data_type);
         if (type_id == null) throw new Error("unknown integer type");
         const type = nullthrows(this.types.get(type_id));
