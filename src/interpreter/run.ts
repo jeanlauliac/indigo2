@@ -27,7 +27,9 @@ function evaluate_expression(exp: Expression) {
   switch (ast.type) {
     case "string":
       return exp.ast.value;
+    case "number":
+      return exp.ast.value;
     default:
-      exhaustive(ast.type);
+      exhaustive(ast);
   }
 }

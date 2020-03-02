@@ -24,11 +24,18 @@ export type StatementAst =
     }
   | { type: "expression"; expression: ExpressionAst };
 
-export type ExpressionAst = {
-  type: "string";
-  value: string;
-  location: Location;
-};
+export type ExpressionAst =
+  | {
+      type: "string";
+      value: string;
+      location: Location;
+    }
+  | {
+      type: "number";
+      value: string;
+      location: Location;
+      data_type: string | null;
+    };
 
 export type UnitAst = {
   functions: FunctionAst[];
@@ -139,6 +146,11 @@ class Parser {
       this.nextt();
       return { type: "string", value, location };
     }
+    if (this.token.type === "number") {
+      const { value, location, data_type } = this.token;
+      this.nextt();
+      return { type: "number", value, location, data_type };
+    }
     return null;
   }
 
@@ -232,13 +244,24 @@ class Parser {
   parse_number(): Token | null {
     if (!is_numeric(this.chr())) return null;
     const location = this.loc();
+    let value = this.chr();
     this.forward();
-    let value = "";
     while (!this.eos() && is_numeric(this.chr())) {
       value += this.chr();
       this.forward();
+      if (!this.eos() && this.chr() === "_") this.forward();
     }
-    return { type: "number", value, location };
+    let data_type = null;
+    if (this.chr() === "i" || this.chr() === "u") {
+      data_type = this.chr();
+      this.forward();
+      if (!is_numeric(this.chr())) throw new Error("expected number bitsize");
+      while (is_numeric(this.chr())) {
+        data_type += this.chr();
+        this.forward();
+      }
+    }
+    return { type: "number", value, location, data_type };
   }
 
   private has_kw(value: Keyword) {

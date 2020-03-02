@@ -11,10 +11,10 @@ export type Function = {
   return_type_id: number;
 };
 
-export type Expression = {
-  ast: ExpressionAst;
-  type_id: number;
-};
+export type Typed = { ast: ExpressionAst; type_id: number };
+
+export type Expression = Typed &
+  ({ type: "string" } | { type: "integer"; value: number });
 
 type Graph = {
   types: Map<number, Type>;
@@ -99,16 +99,40 @@ class Analyser {
     if (exp == null) return null;
     switch (exp.type) {
       case "string":
-        return { ast: exp, type_id: this.builtins.str };
+        return { type: "string", ast: exp, type_id: this.builtins.str };
+
+      case "number": {
+        let type_id = null;
+        if (exp.data_type != null) type_id = this.resolve_type(exp.data_type);
+        if (type_id == null) throw new Error("unknown integer type");
+        const type = nullthrows(this.types.get(type_id));
+        if (type.type !== "integer")
+          throw new Error(`"${type.type}" is not numeric`);
+        let max_value = Math.pow(2, type.bitsize) - 1;
+        let min_value = 0;
+        if (type.signed) {
+          min_value = -(max_value + 1) / 2;
+          max_value = -min_value - 1;
+        }
+        const value = parseInt(exp.value);
+        if (value > max_value) {
+          throw new Error("integer literal is too large for this type");
+        }
+        if (value < min_value) {
+          throw new Error("integer literal is too large for this type");
+        }
+
+        return { type: "integer", ast: exp, type_id, value };
+      }
       default:
-        exhaustive(exp.type);
+        exhaustive(exp);
     }
   }
 
   resolve_type(name: string): number {
-    const type = this.types_by_name.get(name);
-    if (type == null) throw new Error(`unknown type "${name}"`);
-    return type;
+    const type_id = this.types_by_name.get(name);
+    if (type_id == null) throw new Error(`unknown type "${name}"`);
+    return type_id;
   }
 }
 
