@@ -1,7 +1,7 @@
 import { parse } from "./parse";
-import { analyse, Expression } from "../analyse";
+import { analyse, Expression } from "./analyse";
 import { nullthrows } from "./nullthrows";
-import { exhaustive } from "../exhaustive";
+import { exhaustive } from "./exhaustive";
 
 export function run(sourceCode: string, element: HTMLElement) {
   const ast = parse(sourceCode);
@@ -26,9 +26,11 @@ function evaluate_expression(exp: Expression) {
   const { ast } = exp;
   switch (ast.type) {
     case "string":
-      return exp.ast.value;
+      return ast.value;
     case "number":
-      return exp.ast.value;
+      return ast.value;
+    case "element":
+      return "???";
     default:
       exhaustive(ast);
   }

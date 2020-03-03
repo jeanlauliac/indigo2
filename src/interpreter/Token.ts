@@ -19,7 +19,9 @@ const OPERATORS_OBJ = {
   "|": true,
   "||": true,
   "&": true,
-  "&&": true
+  "&&": true,
+  "<": true,
+  ">": true
 };
 
 export const OPERATORS = new Set(Object.keys(OPERATORS_OBJ));

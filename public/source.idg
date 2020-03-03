@@ -2,8 +2,8 @@
 //  "hello, world"
 //}
 
-fn main() -> str {
+fn main() -> elem {
   let count = 0;
   // <button onpress={ || ++count }>Count: { count }</button>
-  "hello"
+  <button></button>
 }

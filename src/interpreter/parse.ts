@@ -25,6 +25,10 @@ export type StatementAst =
   | { type: "let"; initial_value: ExpressionAst; name: string }
   | { type: "expression"; expression: ExpressionAst };
 
+export type ElementChild = {
+  type: "text";
+  value: string;
+};
 export type ExpressionAst =
   | {
       type: "string";
@@ -36,7 +40,8 @@ export type ExpressionAst =
       value: string;
       location: Location;
       data_type: string | null;
-    };
+    }
+  | { type: "element"; name: string; children: ElementChild[] };
 
 export type UnitAst = {
   functions: FunctionAst[];
@@ -175,7 +180,34 @@ class Parser {
       this.nextt();
       return { type: "number", value, location, data_type };
     }
+    let exp;
+    if ((exp = this.parse_element())) return exp;
     return null;
+  }
+
+  parse_element(): ExpressionAst | null {
+    if (!this.has_op("<")) return null;
+    this.nextt();
+    const name = this.get_identifier();
+    this.nextt();
+    if (!this.has_op(">")) throw this.token_err('expected ">"');
+    this.nextt();
+
+    if (!this.has_op("<")) throw this.token_err('expected "<"');
+    this.nextt();
+    if (!this.has_op("/")) throw this.token_err('expected "/"');
+    this.nextt();
+    const end_name = this.get_identifier();
+    this.nextt();
+    if (name !== end_name)
+      throw this.token_err(
+        `mismatched element name, expected "${name}" but got "${end_name}"`
+      );
+
+    if (!this.has_op(">")) throw this.token_err('expected ">"');
+    this.nextt();
+
+    return { type: "element", name, children: [] };
   }
 
   nextt() {

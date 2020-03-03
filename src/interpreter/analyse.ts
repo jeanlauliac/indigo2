@@ -1,5 +1,5 @@
-import { UnitAst, FunctionAst, ExpressionAst } from "./interpreter/parse";
-import { nullthrows } from "./interpreter/nullthrows";
+import { UnitAst, FunctionAst, ExpressionAst } from "./parse";
+import { nullthrows } from "./nullthrows";
 import { exhaustive } from "./exhaustive";
 
 type Bitsize = 8 | 16 | 32;
@@ -19,7 +19,11 @@ export type Function = {
 export type Typed = { ast: ExpressionAst; type_id: number };
 
 export type Expression = Typed &
-  ({ type: "string" } | { type: "integer"; value: number });
+  (
+    | { type: "string" }
+    | { type: "integer"; value: number }
+    | { type: "element" }
+  );
 
 type Graph = {
   types: Map<number, Type>;
@@ -140,6 +144,11 @@ class Analyser {
 
         return { type: "integer", ast: exp, type_id, value };
       }
+
+      case "element": {
+        return { type: "element", ast: exp, type_id: this.builtins.elem };
+      }
+
       default:
         exhaustive(exp);
     }
