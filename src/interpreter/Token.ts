@@ -48,6 +48,6 @@ export type Token = Locatable &
         value: Keyword;
       }
     | { type: "operator"; value: Operator }
-    | { type: "newline" }
+    | { type: "xml_text"; value: string }
     | { type: "end" }
   );

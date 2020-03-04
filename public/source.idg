@@ -5,5 +5,5 @@
 fn main() -> elem {
   let count = 0;
   // <button onpress={ || ++count }>Count: { count }</button>
-  <button></button>
+  <p>Hello, world</p>
 }

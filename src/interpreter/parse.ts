@@ -47,6 +47,8 @@ export type UnitAst = {
   functions: FunctionAst[];
 };
 
+type TokenMode = "normal" | "xml_text";
+
 export function parse(sourceCode: string): UnitAst {
   const parser = new Parser(sourceCode);
   return parser.parse_unit();
@@ -67,6 +69,7 @@ class Parser {
   private token: Token;
   private position: number = 0;
   private location: Location = { row: 1, column: 1 };
+  private token_mode: TokenMode = "normal";
 
   constructor(sourceCode: string) {
     this.sourceCode = sourceCode;
@@ -191,7 +194,14 @@ class Parser {
     const name = this.get_identifier();
     this.nextt();
     if (!this.has_op(">")) throw this.token_err('expected ">"');
+    this.token_mode = "xml_text";
     this.nextt();
+
+    const children: ElementChild[] = [];
+    if (this.token.type === "xml_text") {
+      children.push({ type: "text", value: this.token.value });
+      this.nextt();
+    }
 
     if (!this.has_op("<")) throw this.token_err('expected "<"');
     this.nextt();
@@ -207,7 +217,7 @@ class Parser {
     if (!this.has_op(">")) throw this.token_err('expected ">"');
     this.nextt();
 
-    return { type: "element", name, children: [] };
+    return { type: "element", name, children };
   }
 
   nextt() {
@@ -215,6 +225,7 @@ class Parser {
   }
 
   parse_token(): Token {
+    if (this.token_mode === "xml_text") return this.parse_xml_text();
     do this.discard_whitespace();
     while (this.discard_comment());
     const location = this.loc();
@@ -228,6 +239,33 @@ class Parser {
     if ((token = this.parse_number())) return token;
 
     throw new Error(`unexpected character "${this.chr()}"`);
+  }
+
+  parse_xml_text(): Token {
+    this.discard_whitespace();
+    if (this.eos()) {
+      throw new Error("unexpected end of stream within XML text");
+    }
+    const location = this.loc();
+    if (this.chr() == "<") {
+      this.forward();
+      this.token_mode = "normal";
+      return { type: "operator", value: "<", location };
+    }
+    let value = "";
+    let needs_space = false;
+    while (!this.eos() && this.chr() != "<") {
+      if (needs_space) value += " ";
+      needs_space = false;
+      value += this.chr();
+      this.forward();
+      if (/^[ \t\n]$/.test(this.chr())) {
+        needs_space = true;
+        this.discard_whitespace();
+        continue;
+      }
+    }
+    return { type: "xml_text", value, location };
   }
 
   discard_comment(): boolean {
