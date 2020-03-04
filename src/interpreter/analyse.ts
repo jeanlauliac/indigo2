@@ -1,4 +1,4 @@
-import { UnitAst, FunctionAst, ExpressionAst } from "./parse";
+import { UnitAst, FunctionAst, ExpressionAst, ElementChild } from "./parse";
 import { nullthrows } from "./nullthrows";
 import { exhaustive } from "./exhaustive";
 
@@ -20,9 +20,9 @@ export type Typed = { ast: ExpressionAst; type_id: number };
 
 export type Expression = Typed &
   (
-    | { type: "string" }
+    | { type: "string"; value: string }
     | { type: "integer"; value: number }
-    | { type: "element" }
+    | { type: "element"; name: string; children: ElementChild[] }
   );
 
 type Graph = {
@@ -119,7 +119,12 @@ class Analyser {
     if (exp == null) return null;
     switch (exp.type) {
       case "string":
-        return { type: "string", ast: exp, type_id: this.builtins.str };
+        return {
+          type: "string",
+          ast: exp,
+          type_id: this.builtins.str,
+          value: exp.value
+        };
 
       case "number": {
         let type_id = context.type_hint_id;
@@ -146,7 +151,13 @@ class Analyser {
       }
 
       case "element": {
-        return { type: "element", ast: exp, type_id: this.builtins.elem };
+        return {
+          type: "element",
+          ast: exp,
+          type_id: this.builtins.elem,
+          name: exp.name,
+          children: exp.children
+        };
       }
 
       default:
