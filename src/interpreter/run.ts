@@ -17,12 +17,23 @@ type RuntimeValue =
       value: HTMLElement;
     };
 
+type EvalScope = {
+  outer: EvalScope | null;
+  values_by_id: Map<number, RuntimeValue>;
+};
+
+type EvalContext = {
+  scope: EvalScope;
+};
+
 export function run(sourceCode: string, element: HTMLElement) {
   const ast = parse(sourceCode);
   const graph = analyse(ast);
 
   const entry = nullthrows(graph.functions.get(graph.entry_point_id));
-  const returned = evaluate_expression(nullthrows(entry.return_expression));
+  const returned = evaluate_expression(nullthrows(entry.return_expression), {
+    scope: { outer: null, values_by_id: new Map() }
+  });
 
   element.appendChild(cast_to_element(returned));
 
@@ -36,7 +47,10 @@ export function run(sourceCode: string, element: HTMLElement) {
   // )}</pre>`;
 }
 
-function evaluate_expression(exp: Expression): RuntimeValue {
+function evaluate_expression(
+  exp: Expression,
+  context: EvalContext
+): RuntimeValue {
   const { ast } = exp;
   switch (exp.type) {
     case "string":
@@ -54,7 +68,7 @@ function evaluate_expression(exp: Expression): RuntimeValue {
             break;
 
           case "expression":
-            const value = evaluate_expression(child.value);
+            const value = evaluate_expression(child.value, context);
             el.appendChild(cast_to_element(value));
             break;
 
@@ -63,6 +77,18 @@ function evaluate_expression(exp: Expression): RuntimeValue {
         }
       }
       return { type: "html_element", value: el };
+
+    case "reference": {
+      let value,
+        scope: EvalScope | null = context.scope;
+      while (value == null && scope != null) {
+        value = scope.values_by_id.get(exp.variable_id);
+        scope = scope.outer;
+      }
+      if (value == null)
+        throw new Error(`could not find ID "${exp.variable_id}" in scope`);
+      return value;
+    }
 
     default:
       exhaustive(exp);

@@ -47,6 +47,7 @@ export type ExpressionAst =
       location: Location;
       data_type: string | null;
     }
+  | { type: "reference"; identifier: string }
   | { type: "element"; name: string; children: ElementChildAst[] };
 
 export type UnitAst = {
@@ -189,6 +190,11 @@ class Parser {
       this.nextt();
       return { type: "number", value, location, data_type };
     }
+    if (this.token.type === "identifier") {
+      const { name } = this.token;
+      this.nextt();
+      return { type: "reference", identifier: name };
+    }
     let exp;
     if ((exp = this.parse_element())) return exp;
     return null;
@@ -288,6 +294,9 @@ class Parser {
         this.discard_whitespace();
         continue;
       }
+    }
+    if (this.chr() == "{" && needs_space) {
+      value += " ";
     }
     return { type: "xml_text", value, location };
   }

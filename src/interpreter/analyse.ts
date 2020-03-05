@@ -1,4 +1,4 @@
-import { UnitAst, FunctionAst, ExpressionAst } from "./parse";
+import { UnitAst, FunctionAst, ExpressionAst, StatementAst } from "./parse";
 import { nullthrows } from "./nullthrows";
 import { exhaustive } from "./exhaustive";
 
@@ -11,9 +11,17 @@ export type Type = Named &
     | { type: "element" }
   );
 
+type Statement = { type: "let"; initial_value: Expression; name: string };
+
 export type Function = {
+  statements: Statement[];
   return_expression: Expression | null;
   return_type_id: number;
+};
+
+type Variable = {
+  name: string;
+  type_id: number;
 };
 
 export type Typed = { ast: ExpressionAst; type_id: number };
@@ -33,6 +41,7 @@ export type Expression = Typed &
     | { type: "string"; value: string }
     | { type: "integer"; value: number }
     | { type: "element"; name: string; children: ElementChild[] }
+    | { type: "reference"; variable_id: number }
   );
 
 type Graph = {
@@ -43,6 +52,12 @@ type Graph = {
 
 type ExpressionContext = {
   type_hint_id: number | null;
+  scope: Scope;
+};
+
+type Scope = {
+  vars_by_name: Map<string, number>;
+  outer: Scope | null;
 };
 
 export function analyse(unit: UnitAst): Graph {
@@ -62,6 +77,8 @@ class Analyser {
   types_by_name = new Map();
   types: Map<number, Type> = new Map();
   functions: Map<number, Function> = new Map();
+  variables: Map<number, Variable> = new Map();
+
   builtins: {
     str: number;
     u8: number;
@@ -105,11 +122,29 @@ class Analyser {
 
   analyse_function(func: FunctionAst): Function {
     const return_type_id = this.resolve_type(func.return_type);
+    const scope = { outer: null, vars_by_name: new Map() };
+    const statements = [];
+
+    for (const st_ast of func.statements) {
+      const st = this.analyse_statement(st_ast, scope);
+      if (st.type === "let") {
+        const id = this.next_ID++;
+        scope.vars_by_name.set(st.name, id);
+        this.variables.set(id, {
+          type_id: st.initial_value.type_id,
+          name: st.name
+        });
+      }
+
+      statements.push(st);
+    }
+
     const return_expression =
       func.return_expression == null
         ? null
         : this.analyse_expression(func.return_expression, {
-            type_hint_id: return_type_id
+            type_hint_id: return_type_id,
+            scope
           });
 
     if (return_expression && return_expression.type_id !== return_type_id) {
@@ -122,7 +157,28 @@ class Analyser {
       );
     }
 
-    return { return_type_id, return_expression };
+    return { return_type_id, statements, return_expression };
+  }
+
+  analyse_statement(st: StatementAst, scope: Scope): Statement {
+    switch (st.type) {
+      case "expression":
+      case "return":
+        throw new Error();
+
+      case "let":
+        return {
+          type: "let",
+          name: st.name,
+          initial_value: this.analyse_expression(st.initial_value, {
+            scope,
+            type_hint_id: null
+          })
+        };
+
+      default:
+        exhaustive(st);
+    }
   }
 
   analyse_expression(
@@ -177,7 +233,8 @@ class Analyser {
                 return {
                   type: "expression",
                   value: this.analyse_expression(child.value, {
-                    type_hint_id: this.builtins.str
+                    type_hint_id: this.builtins.str,
+                    scope: context.scope
                   })
                 };
 
@@ -185,6 +242,20 @@ class Analyser {
                 exhaustive(child);
             }
           })
+        };
+      }
+
+      case "reference": {
+        const variable_id = this.resolve_reference(
+          exp.identifier,
+          context.scope
+        );
+        const { type_id } = nullthrows(this.variables.get(variable_id));
+        return {
+          type: "reference",
+          ast: exp,
+          variable_id,
+          type_id
         };
       }
 
@@ -197,6 +268,16 @@ class Analyser {
     const type_id = this.types_by_name.get(name);
     if (type_id == null) throw new Error(`unknown type "${name}"`);
     return type_id;
+  }
+
+  resolve_reference(identifier: string, scope: Scope | null): number {
+    let id;
+    while (id == null && scope != null) {
+      id = scope.vars_by_name.get(identifier);
+      scope = scope.outer;
+    }
+    if (id == null) throw new Error(`could not find "${identifier}" in scope`);
+    return id;
   }
 }
 
