@@ -3,7 +3,7 @@
 //}
 
 fn main() -> elem {
-  let count = 0;
+  let name = "world";
   // <button onpress={ || ++count }>Count: { count }</button>
-  <p>Hello, world</p>
+  <p>Hello, {"world"}</p>
 }

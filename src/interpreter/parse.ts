@@ -25,10 +25,16 @@ export type StatementAst =
   | { type: "let"; initial_value: ExpressionAst; name: string }
   | { type: "expression"; expression: ExpressionAst };
 
-export type ElementChild = {
-  type: "text";
-  value: string;
-};
+export type ElementChildAst =
+  | {
+      type: "text";
+      value: string;
+    }
+  | {
+      type: "expression";
+      value: ExpressionAst;
+    };
+
 export type ExpressionAst =
   | {
       type: "string";
@@ -41,7 +47,7 @@ export type ExpressionAst =
       location: Location;
       data_type: string | null;
     }
-  | { type: "element"; name: string; children: ElementChild[] };
+  | { type: "element"; name: string; children: ElementChildAst[] };
 
 export type UnitAst = {
   functions: FunctionAst[];
@@ -194,14 +200,27 @@ class Parser {
     const name = this.get_identifier();
     this.nextt();
     if (!this.has_op(">")) throw this.token_err('expected ">"');
-    this.token_mode = "xml_text";
-    this.nextt();
 
-    const children: ElementChild[] = [];
-    if (this.token.type === "xml_text") {
-      children.push({ type: "text", value: this.token.value });
+    const children: ElementChildAst[] = [];
+
+    do {
+      this.token_mode = "xml_text";
       this.nextt();
-    }
+
+      if (this.has_op("<")) break;
+      if (this.token.type === "xml_text") {
+        children.push({ type: "text", value: this.token.value });
+        continue;
+      }
+      if (this.has_op("{")) {
+        this.nextt();
+        const value = this.parse_expression();
+        if (value == null) throw this.token_err("expected expression");
+        children.push({ type: "expression", value });
+        if (!this.has_op("}")) throw this.token_err('expected "}"');
+        continue;
+      }
+    } while (this.token.type != "end");
 
     if (!this.has_op("<")) throw this.token_err('expected "<"');
     this.nextt();
@@ -252,9 +271,14 @@ class Parser {
       this.token_mode = "normal";
       return { type: "operator", value: "<", location };
     }
+    if (this.chr() == "{") {
+      this.forward();
+      this.token_mode = "normal";
+      return { type: "operator", value: "{", location };
+    }
     let value = "";
     let needs_space = false;
-    while (!this.eos() && this.chr() != "<") {
+    while (!this.eos() && !/^[{<]$/.test(this.chr())) {
       if (needs_space) value += " ";
       needs_space = false;
       value += this.chr();

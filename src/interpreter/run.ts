@@ -24,22 +24,7 @@ export function run(sourceCode: string, element: HTMLElement) {
   const entry = nullthrows(graph.functions.get(graph.entry_point_id));
   const returned = evaluate_expression(nullthrows(entry.return_expression));
 
-  switch (returned.type) {
-    case "string":
-      element.innerText = returned.value;
-      break;
-
-    case "integer":
-      element.innerText = returned.value.toString();
-      break;
-
-    case "html_element":
-      element.appendChild(returned.value);
-      break;
-
-    default:
-      exhaustive(returned);
-  }
+  element.appendChild(cast_to_element(returned));
 
   // element.innerHTML = `<pre>${JSON.stringify(
   //   graph,
@@ -63,11 +48,42 @@ function evaluate_expression(exp: Expression): RuntimeValue {
     case "element":
       const el = document.createElement(exp.name);
       for (const child of exp.children) {
-        el.appendChild(document.createTextNode(child.value));
+        switch (child.type) {
+          case "text":
+            el.appendChild(document.createTextNode(child.value));
+            break;
+
+          case "expression":
+            const value = evaluate_expression(child.value);
+            el.appendChild(cast_to_element(value));
+            break;
+
+          default:
+            exhaustive(child);
+        }
       }
       return { type: "html_element", value: el };
 
     default:
       exhaustive(exp);
+  }
+}
+
+function cast_to_element(rv: RuntimeValue) {
+  switch (rv.type) {
+    case "string":
+      return document.createTextNode(rv.value);
+      break;
+
+    case "integer":
+      return document.createTextNode(rv.value.toString());
+      break;
+
+    case "html_element":
+      return rv.value;
+      break;
+
+    default:
+      exhaustive(rv);
   }
 }

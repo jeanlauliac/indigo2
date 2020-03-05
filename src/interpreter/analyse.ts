@@ -1,4 +1,4 @@
-import { UnitAst, FunctionAst, ExpressionAst, ElementChild } from "./parse";
+import { UnitAst, FunctionAst, ExpressionAst } from "./parse";
 import { nullthrows } from "./nullthrows";
 import { exhaustive } from "./exhaustive";
 
@@ -17,6 +17,16 @@ export type Function = {
 };
 
 export type Typed = { ast: ExpressionAst; type_id: number };
+
+export type ElementChild =
+  | {
+      type: "text";
+      value: string;
+    }
+  | {
+      type: "expression";
+      value: Expression;
+    };
 
 export type Expression = Typed &
   (
@@ -95,9 +105,12 @@ class Analyser {
 
   analyse_function(func: FunctionAst): Function {
     const return_type_id = this.resolve_type(func.return_type);
-    const return_expression = this.analyse_expression(func.return_expression, {
-      type_hint_id: return_type_id
-    });
+    const return_expression =
+      func.return_expression == null
+        ? null
+        : this.analyse_expression(func.return_expression, {
+            type_hint_id: return_type_id
+          });
 
     if (return_expression && return_expression.type_id !== return_type_id) {
       const expected_type = nullthrows(this.types.get(return_type_id)).name;
@@ -113,10 +126,9 @@ class Analyser {
   }
 
   analyse_expression(
-    exp: ExpressionAst | null,
+    exp: ExpressionAst,
     context: ExpressionContext
-  ): Expression | null {
-    if (exp == null) return null;
+  ): Expression {
     switch (exp.type) {
       case "string":
         return {
@@ -156,7 +168,23 @@ class Analyser {
           ast: exp,
           type_id: this.builtins.elem,
           name: exp.name,
-          children: exp.children
+          children: exp.children.map(child => {
+            switch (child.type) {
+              case "text":
+                return child;
+
+              case "expression":
+                return {
+                  type: "expression",
+                  value: this.analyse_expression(child.value, {
+                    type_hint_id: this.builtins.str
+                  })
+                };
+
+              default:
+                exhaustive(child);
+            }
+          })
         };
       }
 
