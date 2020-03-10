@@ -2,5 +2,5 @@
 fn main() -> elem {
   let name = "world";
   // <button onpress={ || ++count }>Count: { count }</button>
-  <p>Hello, {name}</p>
+  <p class={"foo"}>Hello, {name}</p>
 }

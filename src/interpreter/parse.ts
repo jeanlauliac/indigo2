@@ -205,6 +205,17 @@ class Parser {
     this.nextt();
     const name = this.get_identifier();
     this.nextt();
+    while (this.token.type === "identifier") {
+      const attr_name = this.get_identifier();
+      this.nextt();
+      if (!this.has_op("=")) throw this.token_err('expected "="');
+      this.nextt();
+      if (!this.has_op("{")) throw this.token_err('expected "{"');
+      this.nextt();
+      const attr_value = this.parse_expression();
+      if (!this.has_op("}")) throw this.token_err('expected "}"');
+      this.nextt();
+    }
     if (!this.has_op(">")) throw this.token_err('expected ">"');
 
     const children: ElementChildAst[] = [];
