@@ -1,5 +1,5 @@
 import { parse } from "./parse";
-import { analyse, Expression } from "./analyse";
+import { analyse, Expression, Statement } from "./analyse";
 import { nullthrows } from "./nullthrows";
 import { exhaustive } from "./exhaustive";
 
@@ -31,8 +31,21 @@ export function run(sourceCode: string, element: HTMLElement) {
   const graph = analyse(ast);
 
   const entry = nullthrows(graph.functions.get(graph.entry_point_id));
+  const scope = { outer: null, values_by_id: new Map() };
+
+  for (const statement of entry.statements) {
+    switch (statement.type) {
+      case "let":
+        scope.values_by_id.set(
+          statement.variable_id,
+          evaluate_expression(statement.initial_value, { scope })
+        );
+        break;
+    }
+  }
+
   const returned = evaluate_expression(nullthrows(entry.return_expression), {
-    scope: { outer: null, values_by_id: new Map() }
+    scope
   });
 
   element.appendChild(cast_to_element(returned));

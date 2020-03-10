@@ -11,7 +11,12 @@ export type Type = Named &
     | { type: "element" }
   );
 
-type Statement = { type: "let"; initial_value: Expression; name: string };
+export type Statement = {
+  type: "let";
+  initial_value: Expression;
+  name: string;
+  variable_id: number;
+};
 
 export type Function = {
   statements: Statement[];
@@ -128,9 +133,8 @@ class Analyser {
     for (const st_ast of func.statements) {
       const st = this.analyse_statement(st_ast, scope);
       if (st.type === "let") {
-        const id = this.next_ID++;
-        scope.vars_by_name.set(st.name, id);
-        this.variables.set(id, {
+        scope.vars_by_name.set(st.name, st.variable_id);
+        this.variables.set(st.variable_id, {
           type_id: st.initial_value.type_id,
           name: st.name
         });
@@ -170,6 +174,7 @@ class Analyser {
         return {
           type: "let",
           name: st.name,
+          variable_id: this.next_ID++,
           initial_value: this.analyse_expression(st.initial_value, {
             scope,
             type_hint_id: null
