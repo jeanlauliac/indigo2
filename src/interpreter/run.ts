@@ -1,5 +1,5 @@
 import { parse } from "./parse";
-import { analyse, Expression, Statement } from "./analyse";
+import { analyse, Expression } from "./analyse";
 import { nullthrows } from "./nullthrows";
 import { exhaustive } from "./exhaustive";
 
@@ -49,22 +49,12 @@ export function run(sourceCode: string, element: HTMLElement) {
   });
 
   element.appendChild(cast_to_element(returned));
-
-  // element.innerHTML = `<pre>${JSON.stringify(
-  //   graph,
-  //   (_, val) => {
-  //     if (val instanceof Map) return [...val.entries()];
-  //     return val;
-  //   },
-  //   2
-  // )}</pre>`;
 }
 
 function evaluate_expression(
   exp: Expression,
   context: EvalContext
 ): RuntimeValue {
-  const { ast } = exp;
   switch (exp.type) {
     case "string":
       return { type: "string", value: exp.value };
@@ -87,6 +77,16 @@ function evaluate_expression(
 
           default:
             exhaustive(child);
+        }
+      }
+      for (const attr of exp.attributes) {
+        const value = evaluate_expression(attr.value, context);
+        if (value.type === "string") {
+          el.setAttribute(attr.name, value.value);
+        } else if (value.type === "integer") {
+          el.setAttribute(attr.name, value.value.toString());
+        } else {
+          throw new Error("cannot set element as attribute value");
         }
       }
       return { type: "html_element", value: el };
@@ -112,15 +112,12 @@ function cast_to_element(rv: RuntimeValue) {
   switch (rv.type) {
     case "string":
       return document.createTextNode(rv.value);
-      break;
 
     case "integer":
       return document.createTextNode(rv.value.toString());
-      break;
 
     case "html_element":
       return rv.value;
-      break;
 
     default:
       exhaustive(rv);

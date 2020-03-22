@@ -35,6 +35,11 @@ export type ElementChildAst =
       value: ExpressionAst;
     };
 
+type ElementAttributeAst = {
+  name: string;
+  value: ExpressionAst;
+};
+
 export type ExpressionAst =
   | {
       type: "string";
@@ -48,7 +53,12 @@ export type ExpressionAst =
       data_type: string | null;
     }
   | { type: "reference"; identifier: string }
-  | { type: "element"; name: string; children: ElementChildAst[] };
+  | {
+      type: "element";
+      name: string;
+      children: ElementChildAst[];
+      attributes: ElementAttributeAst[];
+    };
 
 export type UnitAst = {
   functions: FunctionAst[];
@@ -181,9 +191,7 @@ class Parser {
 
   parse_expression(): ExpressionAst | null {
     if (this.token.type === "string") {
-      const { value, location } = this.token;
-      this.nextt();
-      return { type: "string", value, location };
+      return this.parse_string_expression();
     }
     if (this.token.type === "number") {
       const { value, location, data_type } = this.token;
@@ -200,21 +208,27 @@ class Parser {
     return null;
   }
 
+  parse_string_expression(): ExpressionAst {
+    if (this.token.type !== "string") throw new Error("wrong token");
+    const { value, location } = this.token;
+    this.nextt();
+    return { type: "string", value, location };
+  }
+
   parse_element(): ExpressionAst | null {
     if (!this.has_op("<")) return null;
     this.nextt();
     const name = this.get_identifier();
     this.nextt();
+    const attributes = [];
     while (this.token.type === "identifier") {
       const attr_name = this.get_identifier();
       this.nextt();
       if (!this.has_op("=")) throw this.token_err('expected "="');
       this.nextt();
-      if (!this.has_op("{")) throw this.token_err('expected "{"');
-      this.nextt();
-      const attr_value = this.parse_expression();
-      if (!this.has_op("}")) throw this.token_err('expected "}"');
-      this.nextt();
+      const attr_value = this.parse_attribute_value();
+
+      attributes.push({ name: attr_name, value: attr_value });
     }
     if (!this.has_op(">")) throw this.token_err('expected ">"');
 
@@ -237,7 +251,7 @@ class Parser {
         if (!this.has_op("}")) throw this.token_err('expected "}"');
         continue;
       }
-    } while (this.token.type != "end");
+    } while (this.token.type !== "end");
 
     if (!this.has_op("<")) throw this.token_err('expected "<"');
     this.nextt();
@@ -253,7 +267,20 @@ class Parser {
     if (!this.has_op(">")) throw this.token_err('expected ">"');
     this.nextt();
 
-    return { type: "element", name, children };
+    return { type: "element", name, children, attributes };
+  }
+
+  parse_attribute_value(): ExpressionAst {
+    if (this.token.type === "string") {
+      return this.parse_string_expression();
+    }
+    if (!this.has_op("{")) throw this.token_err('expected "{"');
+    this.nextt();
+    const attr_value = this.parse_expression();
+    if (attr_value == null) throw this.token_err("expected expression");
+    if (!this.has_op("}")) throw this.token_err('expected "}"');
+    this.nextt();
+    return attr_value;
   }
 
   nextt() {
@@ -283,12 +310,12 @@ class Parser {
       throw new Error("unexpected end of stream within XML text");
     }
     const location = this.loc();
-    if (this.chr() == "<") {
+    if (this.chr() === "<") {
       this.forward();
       this.token_mode = "normal";
       return { type: "operator", value: "<", location };
     }
-    if (this.chr() == "{") {
+    if (this.chr() === "{") {
       this.forward();
       this.token_mode = "normal";
       return { type: "operator", value: "{", location };
@@ -306,7 +333,7 @@ class Parser {
         continue;
       }
     }
-    if (this.chr() == "{" && needs_space) {
+    if (this.chr() === "{" && needs_space) {
       value += " ";
     }
     return { type: "xml_text", value, location };

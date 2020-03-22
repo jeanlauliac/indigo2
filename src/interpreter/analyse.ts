@@ -41,11 +41,21 @@ export type ElementChild =
       value: Expression;
     };
 
+type ElementAttribute = {
+  name: string;
+  value: Expression;
+};
+
 export type Expression = Typed &
   (
     | { type: "string"; value: string }
     | { type: "integer"; value: number }
-    | { type: "element"; name: string; children: ElementChild[] }
+    | {
+        type: "element";
+        name: string;
+        children: ElementChild[];
+        attributes: ElementAttribute[];
+      }
     | { type: "reference"; variable_id: number }
   );
 
@@ -229,6 +239,14 @@ class Analyser {
           ast: exp,
           type_id: this.builtins.elem,
           name: exp.name,
+          attributes: exp.attributes.map(attr => {
+            const value = this.analyse_expression(attr.value, {
+              type_hint_id: this.builtins.str,
+              scope: context.scope
+            });
+            return { name: attr.name, value };
+          }),
+          // eslint-disable-next-line
           children: exp.children.map(child => {
             switch (child.type) {
               case "text":
