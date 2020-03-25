@@ -6,6 +6,7 @@ type Bitsize = 8 | 16 | 32;
 type Named = { name: string };
 export type Type = Named &
   (
+    | { type: "void" }
     | { type: "string" }
     | { type: "integer"; signed: boolean; bitsize: Bitsize }
     | { type: "element" }
@@ -29,7 +30,7 @@ type Variable = {
   type_id: number;
 };
 
-export type Typed = { ast: ExpressionAst; type_id: number };
+export type Typed = { ast?: ExpressionAst; type_id: number };
 
 export type ElementChild =
   | {
@@ -57,6 +58,11 @@ export type Expression = Typed &
         attributes: ElementAttribute[];
       }
     | { type: "reference"; variable_id: number }
+    | {
+        type: "block";
+        statements: Statement[];
+        return_expression: Expression | null;
+      }
   );
 
 type Graph = {
@@ -95,6 +101,7 @@ class Analyser {
   variables: Map<number, Variable> = new Map();
 
   builtins: {
+    void: number;
     str: number;
     u8: number;
     u16: number;
@@ -107,6 +114,7 @@ class Analyser {
 
   constructor() {
     this.builtins = {
+      void: this.register_builtin_type({ type: "void", name: "void" }),
       str: this.register_builtin_type({ type: "string", name: "str" }),
       u8: this.register_builtin_type(int_type("u8", false, 8)),
       u16: this.register_builtin_type(int_type("u16", false, 16)),
@@ -279,6 +287,23 @@ class Analyser {
           ast: exp,
           variable_id,
           type_id
+        };
+      }
+
+      case "block": {
+        const return_expression =
+          exp.return_expression &&
+          this.analyse_expression(exp.return_expression, context);
+        return {
+          type: "block",
+          statements: exp.statements.map(st_ast =>
+            this.analyse_statement(st_ast, context.scope)
+          ),
+          return_expression,
+          type_id:
+            return_expression != null
+              ? return_expression.type_id
+              : this.builtins.void
         };
       }
 

@@ -3,6 +3,18 @@ import { analyse, Expression } from "./analyse";
 import { nullthrows } from "./nullthrows";
 import { exhaustive } from "./exhaustive";
 
+type HtmlNode =
+  | {
+      type: "element";
+      name: string;
+      children: HtmlNode[];
+      attributes: Map<string, string>;
+    }
+  | {
+      type: "text";
+      value: string;
+    };
+
 type RuntimeValue =
   | {
       type: "string";
@@ -14,8 +26,9 @@ type RuntimeValue =
     }
   | {
       type: "html_element";
-      value: HTMLElement;
-    };
+      value: HtmlNode;
+    }
+  | { type: "closure" };
 
 type EvalScope = {
   outer: EvalScope | null;
@@ -48,7 +61,27 @@ export function run(sourceCode: string, element: HTMLElement) {
     scope
   });
 
-  element.appendChild(cast_to_element(returned));
+  element.appendChild(create_DOM_element(cast_to_node(returned)));
+}
+
+function create_DOM_element(node: HtmlNode): Node {
+  switch (node.type) {
+    case "element":
+      const el = document.createElement(node.name);
+      for (const child of node.children) {
+        el.appendChild(create_DOM_element(child));
+      }
+      for (const [name, value] of node.attributes) {
+        el.setAttribute(name, value);
+      }
+      return el;
+
+    case "text":
+      return document.createTextNode(node.value);
+
+    default:
+      exhaustive(node);
+  }
 }
 
 function evaluate_expression(
@@ -63,16 +96,24 @@ function evaluate_expression(
       return { type: "integer", value: exp.value };
 
     case "element":
-      const el = document.createElement(exp.name);
+      // const el = document.createElement(exp.name);
+      const el: HtmlNode = {
+        type: "element",
+        name: exp.name,
+        children: [],
+        attributes: new Map()
+      };
       for (const child of exp.children) {
         switch (child.type) {
           case "text":
-            el.appendChild(document.createTextNode(child.value));
+            // el.appendChild(document.createTextNode(child.value));
+            el.children.push({ type: "text", value: child.value });
             break;
 
           case "expression":
             const value = evaluate_expression(child.value, context);
-            el.appendChild(cast_to_element(value));
+            el.children.push(cast_to_node(value));
+            // el.appendChild(cast_to_element(value));
             break;
 
           default:
@@ -82,9 +123,11 @@ function evaluate_expression(
       for (const attr of exp.attributes) {
         const value = evaluate_expression(attr.value, context);
         if (value.type === "string") {
-          el.setAttribute(attr.name, value.value);
+          el.attributes.set(attr.name, value.value);
         } else if (value.type === "integer") {
-          el.setAttribute(attr.name, value.value.toString());
+          el.attributes.set(attr.name, value.value.toString());
+        } else if (value.type === "closure") {
+          el.attributes.set(attr.name, 'javascript:console.log("closure")');
         } else {
           throw new Error("cannot set element as attribute value");
         }
@@ -103,21 +146,28 @@ function evaluate_expression(
       return value;
     }
 
+    case "block": {
+      return { type: "closure" };
+    }
+
     default:
       exhaustive(exp);
   }
 }
 
-function cast_to_element(rv: RuntimeValue) {
+function cast_to_node(rv: RuntimeValue): HtmlNode {
   switch (rv.type) {
     case "string":
-      return document.createTextNode(rv.value);
+      return { type: "text", value: rv.value };
 
     case "integer":
-      return document.createTextNode(rv.value.toString());
+      return { type: "text", value: rv.value.toString() };
 
     case "html_element":
       return rv.value;
+
+    case "closure":
+      return { type: "text", value: "<closure>" };
 
     default:
       exhaustive(rv);

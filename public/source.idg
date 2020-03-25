@@ -1,6 +1,7 @@
 
 fn main() -> elem {
-  let name = <span style="color: red">world</span>;
-  // <button onpress={ || ++count }>Count: { count }</button>
-  <p class="foo">Hello, {name}.</p>
+  let name = "world";
+  let colored_name = <span style="color: red">{name}</span>;
+
+  <p class="foo" onclick={{ }}>Hello, {colored_name}.</p>
 }

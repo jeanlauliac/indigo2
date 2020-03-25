@@ -10,11 +10,9 @@ import { IndigoError } from "./IndigoError";
 
 export type FunctionAst = {
   name: string;
-  statements: StatementAst[];
   location: Location;
-  return_expression: ExpressionAst | null;
   return_type: string;
-};
+} & Block;
 
 export type StatementAst =
   | {
@@ -40,6 +38,11 @@ type ElementAttributeAst = {
   value: ExpressionAst;
 };
 
+type Block = {
+  statements: StatementAst[];
+  return_expression: ExpressionAst | null;
+};
+
 export type ExpressionAst =
   | {
       type: "string";
@@ -53,6 +56,7 @@ export type ExpressionAst =
       data_type: string | null;
     }
   | { type: "reference"; identifier: string }
+  | ({ type: "block" } & Block)
   | {
       type: "element";
       name: string;
@@ -123,36 +127,10 @@ class Parser {
     const return_type = this.get_identifier();
     this.nextt();
 
-    if (!this.has_op("{")) throw this.token_err('expected operator "{"');
-    this.nextt();
+    const body = this.parse_block();
+    if (body == null) throw this.token_err("expected block");
 
-    const statements: StatementAst[] = [];
-    let return_expression = null;
-
-    while (this.token.type !== "end" && !this.has_op("}")) {
-      let statement;
-      if ((statement = this.parse_statement())) {
-        if (!this.has_op(";")) throw this.token_err('expected operator ";"');
-        this.nextt();
-        statements.push(statement);
-        continue;
-      }
-
-      const expression = this.parse_expression();
-      if (expression == null) throw this.token_err("unexpected token");
-
-      if (this.has_op(";")) {
-        this.nextt();
-        statements.push({ type: "expression", expression });
-      } else if (this.has_op("}")) {
-        return_expression = expression;
-      }
-    }
-
-    if (!this.has_op("}")) throw this.token_err('expected operator "}"');
-    this.nextt();
-
-    return { name, statements, location, return_type, return_expression };
+    return { name, location, return_type, ...body };
   }
 
   parse_statement(): StatementAst | null {
@@ -205,6 +183,7 @@ class Parser {
     }
     let exp;
     if ((exp = this.parse_element())) return exp;
+    if ((exp = this.parse_block_expression())) return exp;
     return null;
   }
 
@@ -281,6 +260,45 @@ class Parser {
     if (!this.has_op("}")) throw this.token_err('expected "}"');
     this.nextt();
     return attr_value;
+  }
+
+  parse_block_expression(): ExpressionAst | null {
+    const block = this.parse_block();
+    if (block == null) return null;
+    return { type: "block", ...block };
+  }
+
+  parse_block(): Block | null {
+    if (!this.has_op("{")) return null;
+    this.nextt();
+
+    const statements: StatementAst[] = [];
+    let return_expression = null;
+
+    while (this.token.type !== "end" && !this.has_op("}")) {
+      let statement;
+      if ((statement = this.parse_statement())) {
+        if (!this.has_op(";")) throw this.token_err('expected operator ";"');
+        this.nextt();
+        statements.push(statement);
+        continue;
+      }
+
+      const expression = this.parse_expression();
+      if (expression == null) throw this.token_err("unexpected token");
+
+      if (this.has_op(";")) {
+        this.nextt();
+        statements.push({ type: "expression", expression });
+      } else if (this.has_op("}")) {
+        return_expression = expression;
+      }
+    }
+
+    if (!this.has_op("}")) throw this.token_err('expected operator "}"');
+    this.nextt();
+
+    return { statements, return_expression };
   }
 
   nextt() {
