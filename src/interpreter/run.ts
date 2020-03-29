@@ -1,7 +1,8 @@
 import { parse } from "./parsing/parse";
-import { analyse, Expression } from "./analyse";
+import { analyse } from "./analyse/analyse";
 import { nullthrows } from "./nullthrows";
 import { exhaustive } from "./exhaustive";
+import { Expression } from "./analyse/Graph";
 
 type Closure = {
   function_id: number;
