@@ -59,9 +59,8 @@ export type Expression = Typed &
       }
     | { type: "reference"; variable_id: number }
     | {
-        type: "block";
-        statements: Statement[];
-        return_expression: Expression | null;
+        type: "closure";
+        function_id: number;
       }
   );
 
@@ -290,21 +289,26 @@ class Analyser {
         };
       }
 
-      case "block": {
+      case "closure": {
         const return_expression =
           exp.return_expression &&
           this.analyse_expression(exp.return_expression, context);
-        return {
-          type: "block",
+
+        const return_type_id =
+          return_expression != null
+            ? return_expression.type_id
+            : this.builtins.void;
+
+        const function_id = this.next_ID++;
+        this.functions.set(function_id, {
           statements: exp.statements.map(st_ast =>
             this.analyse_statement(st_ast, context.scope)
           ),
           return_expression,
-          type_id:
-            return_expression != null
-              ? return_expression.type_id
-              : this.builtins.void
-        };
+          return_type_id
+        });
+
+        return { type: "closure", function_id, type_id: return_type_id };
       }
 
       default:

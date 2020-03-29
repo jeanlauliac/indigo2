@@ -3,12 +3,18 @@ import { analyse, Expression } from "./analyse";
 import { nullthrows } from "./nullthrows";
 import { exhaustive } from "./exhaustive";
 
+type Closure = {
+  function_id: number;
+  scope: EvalScope;
+};
+
 type HtmlNode =
   | {
       type: "element";
       name: string;
       children: HtmlNode[];
       attributes: Map<string, string>;
+      handlers: Map<string, Closure>;
     }
   | {
       type: "text";
@@ -28,7 +34,7 @@ type RuntimeValue =
       type: "html_element";
       value: HtmlNode;
     }
-  | { type: "closure" };
+  | { type: "closure"; function_id: number; scope: EvalScope };
 
 type EvalScope = {
   outer: EvalScope | null;
@@ -101,7 +107,8 @@ function evaluate_expression(
         type: "element",
         name: exp.name,
         children: [],
-        attributes: new Map()
+        attributes: new Map(),
+        handlers: new Map()
       };
       for (const child of exp.children) {
         switch (child.type) {
@@ -127,7 +134,10 @@ function evaluate_expression(
         } else if (value.type === "integer") {
           el.attributes.set(attr.name, value.value.toString());
         } else if (value.type === "closure") {
-          el.attributes.set(attr.name, 'javascript:console.log("closure")');
+          el.handlers.set(attr.name, {
+            function_id: value.function_id,
+            scope: value.scope
+          });
         } else {
           throw new Error("cannot set element as attribute value");
         }
@@ -146,8 +156,12 @@ function evaluate_expression(
       return value;
     }
 
-    case "block": {
-      return { type: "closure" };
+    case "closure": {
+      return {
+        type: "closure",
+        function_id: exp.function_id,
+        scope: context.scope
+      };
     }
 
     default:

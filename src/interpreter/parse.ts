@@ -56,7 +56,7 @@ export type ExpressionAst =
       data_type: string | null;
     }
   | { type: "reference"; identifier: string }
-  | ({ type: "block" } & Block)
+  | ({ type: "closure" } & Block)
   | {
       type: "element";
       name: string;
@@ -183,7 +183,7 @@ class Parser {
     }
     let exp;
     if ((exp = this.parse_element())) return exp;
-    if ((exp = this.parse_block_expression())) return exp;
+    if ((exp = this.parse_closure())) return exp;
     return null;
   }
 
@@ -262,10 +262,10 @@ class Parser {
     return attr_value;
   }
 
-  parse_block_expression(): ExpressionAst | null {
+  parse_closure(): ExpressionAst | null {
     const block = this.parse_block();
     if (block == null) return null;
-    return { type: "block", ...block };
+    return { type: "closure", ...block };
   }
 
   parse_block(): Block | null {
