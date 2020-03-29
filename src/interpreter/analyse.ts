@@ -3,7 +3,7 @@ import {
   FunctionAst,
   ExpressionAst,
   StatementAst
-} from "./parsing/parse";
+} from "./parsing/UnitAst";
 import { nullthrows } from "./nullthrows";
 import { exhaustive } from "./exhaustive";
 
