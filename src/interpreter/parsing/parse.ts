@@ -1,6 +1,6 @@
-import { Token, Keyword, Operator, Location } from "./Token";
+import { Token, Keyword, Operator, Location } from "../tokens/Token";
 import { IndigoError } from "../IndigoError";
-import { Tokenizer } from "./Tokenizer";
+import { Tokenizer } from "../tokens/Tokenizer";
 
 export type FunctionAst = {
   name: string;
@@ -193,7 +193,7 @@ class Parser {
     const children: ElementChildAst[] = [];
 
     do {
-      this.tokenizer.token_mode = "xml_text";
+      this.tokenizer.token_mode.val = "xml_text";
       this.forward();
 
       if (this.has_op("<")) break;

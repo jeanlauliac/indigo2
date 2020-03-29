@@ -51,3 +51,17 @@ export type Token = Locatable &
     | { type: "xml_text"; value: string }
     | { type: "end" }
   );
+
+export type TokenMode = "normal" | "xml_text";
+export type Ref<T> = { val: T };
+export function ref<T>(val: T): Ref<T> {
+  return { val };
+}
+
+export function is_alpha(char: string) {
+  return /^[a-zA-Z_]$/.test(char);
+}
+
+export function is_numeric(char: string) {
+  return /^[0-9]$/.test(char);
+}
