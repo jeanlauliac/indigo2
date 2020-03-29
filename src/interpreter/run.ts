@@ -1,4 +1,4 @@
-import { parse } from "./parse";
+import { parse } from "./parsing/parse";
 import { analyse, Expression } from "./analyse";
 import { nullthrows } from "./nullthrows";
 import { exhaustive } from "./exhaustive";

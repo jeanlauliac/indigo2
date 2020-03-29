@@ -1,4 +1,9 @@
-import { UnitAst, FunctionAst, ExpressionAst, StatementAst } from "./parse";
+import {
+  UnitAst,
+  FunctionAst,
+  ExpressionAst,
+  StatementAst
+} from "./parsing/parse";
 import { nullthrows } from "./nullthrows";
 import { exhaustive } from "./exhaustive";
 

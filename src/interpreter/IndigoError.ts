@@ -1,4 +1,4 @@
-import { Location } from "./Token";
+import { Location } from "./parsing/Token";
 
 export type Metadata = {
   type: "parse";
