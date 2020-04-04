@@ -3,6 +3,22 @@ import { TokenReader } from "./TokenReader";
 import { parse_block } from "./parse_block";
 
 export function parse_expression(tr: TokenReader): ExpressionAst | null {
+  const target = parse_primary_expression(tr);
+  if (target == null) return null;
+  if (!tr.has_op("=")) return target;
+  if (target.type !== "reference")
+    throw tr.token_err("left side of assignment must be a reference");
+  tr.forward();
+
+  const value = parse_expression(tr);
+  if (value == null) throw tr.token_err('expected expression after "="');
+
+  return { type: "assignment", target, value };
+}
+
+export function parse_primary_expression(
+  tr: TokenReader
+): ExpressionAst | null {
   if (tr.token.type === "string") {
     return parse_string(tr);
   }

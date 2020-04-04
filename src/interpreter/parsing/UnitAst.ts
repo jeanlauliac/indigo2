@@ -4,7 +4,7 @@ export type FunctionAst = {
   name: string;
   location: Location;
   return_type: string;
-} & Block;
+} & BlockAst;
 
 export type StatementAst =
   | {
@@ -30,7 +30,7 @@ type ElementAttributeAst = {
   value: ExpressionAst;
 };
 
-export type Block = {
+export type BlockAst = {
   statements: StatementAst[];
   return_expression: ExpressionAst | null;
 };
@@ -52,12 +52,19 @@ export type ElementAst = {
   attributes: ElementAttributeAst[];
 };
 
+export type ReferenceAst = { identifier: string };
+export type AssignmentAst = {
+  target: ReferenceAst;
+  value: ExpressionAst;
+};
+
 export type ExpressionAst =
   | ({ type: "string" } & StringAst)
   | ({ type: "number" } & NumberAst)
-  | { type: "reference"; identifier: string }
-  | ({ type: "closure" } & Block)
-  | ({ type: "element" } & ElementAst);
+  | ({ type: "reference" } & ReferenceAst)
+  | ({ type: "closure" } & BlockAst)
+  | ({ type: "element" } & ElementAst)
+  | ({ type: "assignment" } & AssignmentAst);
 
 export type UnitAst = {
   functions: FunctionAst[];

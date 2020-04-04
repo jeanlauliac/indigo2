@@ -1,9 +1,9 @@
 import { TokenReader } from "./TokenReader";
-import { Block, StatementAst } from "./UnitAst";
+import { StatementAst, BlockAst } from "./UnitAst";
 import { parse_statement } from "./parse_statement";
 import { parse_expression } from "./parse_expression";
 
-export function parse_block(tr: TokenReader): Block | null {
+export function parse_block(tr: TokenReader): BlockAst | null {
   if (!tr.has_op("{")) return null;
   tr.forward();
 

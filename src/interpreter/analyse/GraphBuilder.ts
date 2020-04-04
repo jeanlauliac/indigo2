@@ -1,4 +1,5 @@
 import { Function, Type, Variable, Bitsize } from "./Graph";
+import { nullthrows } from "../nullthrows";
 
 export type BuiltinIDs = {
   void: number;
@@ -10,6 +11,7 @@ export type BuiltinIDs = {
   i16: number;
   i32: number;
   elem: number;
+  func: number;
 };
 
 export class GraphBuilder {
@@ -31,7 +33,8 @@ export class GraphBuilder {
       i8: this.register_builtin_type(int_type("i8", true, 8)),
       i16: this.register_builtin_type(int_type("i16", true, 16)),
       i32: this.register_builtin_type(int_type("i32", true, 32)),
-      elem: this.register_builtin_type({ type: "element", name: "elem" })
+      elem: this.register_builtin_type({ type: "element", name: "elem" }),
+      func: this.register_builtin_type({ type: "function", name: "func" })
     };
   }
 
@@ -46,6 +49,10 @@ export class GraphBuilder {
     const type_id = this.types_by_name.get(name);
     if (type_id == null) throw new Error(`unknown type "${name}"`);
     return type_id;
+  }
+
+  get_variable(id: number): Variable {
+    return nullthrows(this.variables.get(id));
   }
 }
 

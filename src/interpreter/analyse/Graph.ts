@@ -38,7 +38,17 @@ export type Expression = Typed &
         type: "closure";
         function_id: number;
       }
+    | {
+        type: "assignment";
+        target_id: number;
+        value: Expression;
+      }
   );
+
+export type Block = {
+  statements: Statement[];
+  return_expression: Expression | null;
+};
 
 export type Bitsize = 8 | 16 | 32;
 export type Named = { name: string };
@@ -48,6 +58,7 @@ export type Type = Named &
     | { type: "string" }
     | { type: "integer"; signed: boolean; bitsize: Bitsize }
     | { type: "element" }
+    | { type: "function" }
   );
 
 export type Statement = {
@@ -58,12 +69,11 @@ export type Statement = {
 };
 
 export type Function = {
-  statements: Statement[];
-  return_expression: Expression | null;
   return_type_id: number;
-};
+} & Block;
 
 export type Variable = {
   name: string;
   type_id: number;
+  function_id: number;
 };

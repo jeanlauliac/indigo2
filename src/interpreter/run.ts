@@ -165,6 +165,12 @@ function evaluate_expression(
       };
     }
 
+    case "assignment": {
+      const value = evaluate_expression(exp.value, context);
+      // TODO: do the actual assignment
+      return value;
+    }
+
     default:
       exhaustive(exp);
   }

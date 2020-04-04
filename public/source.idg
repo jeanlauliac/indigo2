@@ -5,9 +5,7 @@ fn main() -> elem {
 
   <p
     class="foo"
-    onclick={{
-      let name = "there";
-    }}>
+    onclick={{ name = "there" }}>
     Hello, {colored_name}.
   </p>
 }
