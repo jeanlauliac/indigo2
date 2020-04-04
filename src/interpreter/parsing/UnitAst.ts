@@ -35,26 +35,29 @@ export type Block = {
   return_expression: ExpressionAst | null;
 };
 
+export type StringAst = {
+  value: string;
+  location: Location;
+};
+
+export type NumberAst = {
+  value: string;
+  location: Location;
+  data_type: string | null;
+};
+
+export type ElementAst = {
+  name: string;
+  children: ElementChildAst[];
+  attributes: ElementAttributeAst[];
+};
+
 export type ExpressionAst =
-  | {
-      type: "string";
-      value: string;
-      location: Location;
-    }
-  | {
-      type: "number";
-      value: string;
-      location: Location;
-      data_type: string | null;
-    }
+  | ({ type: "string" } & StringAst)
+  | ({ type: "number" } & NumberAst)
   | { type: "reference"; identifier: string }
   | ({ type: "closure" } & Block)
-  | {
-      type: "element";
-      name: string;
-      children: ElementChildAst[];
-      attributes: ElementAttributeAst[];
-    };
+  | ({ type: "element" } & ElementAst);
 
 export type UnitAst = {
   functions: FunctionAst[];

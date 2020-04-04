@@ -21,7 +21,7 @@ type ElementAttribute = {
   value: Expression;
 };
 
-export type Typed = { ast?: ExpressionAst; type_id: number };
+export type Typed = { type_id: number };
 
 export type Expression = Typed &
   (
