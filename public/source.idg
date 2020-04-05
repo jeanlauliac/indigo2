@@ -1,7 +1,7 @@
 
 fn main() -> elem {
   let name = "world";
-  let colored_name = <span style="color: red">{name}</span>;
+  let colored_name = <span style = "color: red">{name}</ span>;
 
   <p
     class="foo"
