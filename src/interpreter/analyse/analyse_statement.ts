@@ -19,17 +19,25 @@ export function analyse_statement(
     case "return":
       throw new Error();
 
-    case "let":
+    case "let": {
+      const initial_value = analyse_expression(gb, st.initial_value, {
+        scope: context.scope,
+        type_hint_id: gb.builtins.void,
+        function_id: context.function_id
+      });
+      const variable_id = gb.register_variable({
+        type_id: initial_value.type_id,
+        name: st.name,
+        function_id: context.function_id
+      });
+      context.scope.vars_by_name.set(st.name, variable_id);
       return {
         type: "let",
         name: st.name,
-        variable_id: gb.next_ID++,
-        initial_value: analyse_expression(gb, st.initial_value, {
-          scope: context.scope,
-          type_hint_id: gb.builtins.void,
-          function_id: context.function_id
-        })
+        variable_id,
+        initial_value
       };
+    }
 
     default:
       exhaustive(st);

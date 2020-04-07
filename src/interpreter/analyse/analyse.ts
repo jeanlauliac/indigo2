@@ -11,7 +11,7 @@ export function analyse(unit: UnitAst): Graph {
   return {
     types: gb.types,
     functions: gb.functions,
-    entry_point_id: gb.funcs_by_name.get("main")[0]
+    entry_point_id: nullthrows(gb.funcs_by_name.get("main"))[0]
   };
 }
 

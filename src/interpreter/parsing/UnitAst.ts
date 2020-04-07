@@ -35,6 +35,10 @@ export type BlockAst = {
   return_expression: ExpressionAst | null;
 };
 
+export type ClosureAst = BlockAst & {
+  arguments: { name: string; type: string }[];
+};
+
 export type StringAst = {
   value: string;
   location: Location;
@@ -62,7 +66,7 @@ export type ExpressionAst =
   | ({ type: "string" } & StringAst)
   | ({ type: "number" } & NumberAst)
   | ({ type: "reference" } & ReferenceAst)
-  | ({ type: "closure" } & BlockAst)
+  | ({ type: "closure" } & ClosureAst)
   | ({ type: "element" } & ElementAst)
   | ({ type: "assignment" } & AssignmentAst);
 

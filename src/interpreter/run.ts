@@ -139,14 +139,15 @@ export function run(sourceCode: string, element: HTMLElement) {
   const ast = parse(sourceCode);
   const graph = analyse(ast);
 
-  const returned = evaluate_function(graph, graph.entry_point_id, null);
+  const returned = evaluate_function(graph, graph.entry_point_id, null, []);
   element.appendChild(create_DOM_node(graph, returned));
 }
 
 function evaluate_function(
   graph: Graph,
   function_id: number,
-  outer_scope: EvalScope | null
+  outer_scope: EvalScope | null,
+  args: any[]
 ): EvalResult {
   const func = nullthrows(graph.functions.get(function_id));
   const scope: EvalScope = { outer: outer_scope, variables_by_id: new Map() };
@@ -176,8 +177,12 @@ function create_DOM_element(graph: Graph, value: RuntimeElement): HTMLElement {
     el.setAttribute(name, attr_val);
   }
   for (const [name, closure] of value.event_listeners) {
-    el.addEventListener(name, () => {
-      evaluate_function(graph, closure.function_id, closure.scope);
+    el.addEventListener(name, ev => {
+      let args: any[] = [];
+      if (name === "input") {
+        args = [(ev.target as any).value];
+      }
+      evaluate_function(graph, closure.function_id, closure.scope, args);
     });
   }
 
@@ -371,53 +376,3 @@ function resolve_variable(scope: EvalScope | null, variable_id: number) {
     throw new Error(`could not find ID "${variable_id}" in scope`);
   return value;
 }
-
-// function cast_to_node(result: EvalResult): Dynamic<HtmlNode> {
-//   return map_result(
-//     result,
-//     (rv: RuntimeValue): HtmlNode => {
-//       switch (rv.type) {
-//         case "string":
-//           return { type: "text", value: rv.value };
-
-//         case "integer":
-//           return { type: "text", value: rv.value.toString() };
-
-//         case "html_node":
-//           return rv.value;
-
-//         case "closure":
-//           throw new Error("cannot render closure as HTML element");
-
-//         case "void":
-//           return { type: "text", value: "" };
-
-//         default:
-//           exhaustive(rv);
-//       }
-//     }
-//   );
-// }
-
-// function map_result<T>(
-//   result: EvalResult,
-//   mapper: (value: RuntimeValue) => T
-// ): EvalResult<T> {
-//   switch (result.type) {
-//     case "static": {
-//       return { type: "static", value: mapper(result.value) };
-//     }
-
-//     case "dynamic": {
-//       let dyn_value: DynamicValue;
-//       const init_value = result.value.subscribe(new_value =>
-//         dyn_value.set(mapper(new_value))
-//       );
-//       dyn_value = new DynamicValue(mapper(init_value));
-//       return { type: "dynamic", value: dyn_value };
-//     }
-
-//     default:
-//       exhaustive(result);
-//   }
-// }

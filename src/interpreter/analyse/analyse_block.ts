@@ -21,15 +21,6 @@ export function analyse_block(
 
   for (const st_ast of block.statements) {
     const st = analyse_statement(gb, st_ast, { scope, function_id });
-    if (st.type === "let") {
-      scope.vars_by_name.set(st.name, st.variable_id);
-      gb.variables.set(st.variable_id, {
-        type_id: st.initial_value.type_id,
-        name: st.name,
-        function_id
-      });
-    }
-
     statements.push(st);
   }
 

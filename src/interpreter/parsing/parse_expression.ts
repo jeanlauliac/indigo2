@@ -117,7 +117,28 @@ function parse_attribute_value(tr: TokenReader): ExpressionAst {
 }
 
 function parse_closure(tr: TokenReader): ExpressionAst | null {
+  if (!tr.has_op("|")) {
+    const block = parse_block(tr);
+    if (block == null) return null;
+    return { type: "closure", arguments: [], ...block };
+  }
+  tr.forward();
+  const args = [];
+  while (!tr.has_op("|")) {
+    const name = tr.get_identifier();
+    tr.forward();
+    if (!tr.has_op(":")) throw tr.token_err('expected ":"');
+    tr.forward();
+    const type = tr.get_identifier();
+    tr.forward();
+    args.push({ name, type });
+    if (tr.has_op(",")) tr.forward();
+    else if (!tr.has_op("|")) throw tr.token_err("unexpected token");
+  }
+  tr.forward();
+
   const block = parse_block(tr);
-  if (block == null) return null;
-  return { type: "closure", ...block };
+  if (block == null) throw tr.token_err("expected block");
+
+  return { type: "closure", arguments: args, ...block };
 }

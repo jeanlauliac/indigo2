@@ -1,5 +1,6 @@
 import { Function, Type, Variable, Bitsize } from "./Graph";
 import { nullthrows } from "../nullthrows";
+import { FunctionAst } from "../parsing/UnitAst";
 
 export type BuiltinIDs = {
   void: number;
@@ -16,11 +17,11 @@ export type BuiltinIDs = {
 
 export class GraphBuilder {
   next_ID: number = 1;
-  funcs_by_name = new Map();
-  types_by_name = new Map();
+  funcs_by_name: Map<string, [number, FunctionAst]> = new Map();
+  types_by_name: Map<string, number> = new Map();
   types: Map<number, Type> = new Map();
   functions: Map<number, Function> = new Map();
-  variables: Map<number, Variable> = new Map();
+  private variables: Map<number, Variable> = new Map();
   builtins: BuiltinIDs;
 
   constructor() {
@@ -49,6 +50,12 @@ export class GraphBuilder {
     const type_id = this.types_by_name.get(name);
     if (type_id == null) throw new Error(`unknown type "${name}"`);
     return type_id;
+  }
+
+  register_variable(vr: Variable): number {
+    const id = this.next_ID++;
+    this.variables.set(id, vr);
+    return id;
   }
 
   get_variable(id: number): Variable {

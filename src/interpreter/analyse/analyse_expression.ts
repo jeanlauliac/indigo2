@@ -1,5 +1,4 @@
 import { ExpressionAst, ElementAst } from "../parsing/UnitAst";
-import { nullthrows } from "../nullthrows";
 import { GraphBuilder } from "./GraphBuilder";
 import { exhaustive } from "../exhaustive";
 import { Expression } from "./Graph";
@@ -15,7 +14,7 @@ export type ExpressionContext = {
 
 export type Scope = {
   vars_by_name: Map<string, number>;
-  outer: Scope | null;
+  outer: Readonly<Scope | null>;
 };
 
 export function analyse_expression(
@@ -39,7 +38,7 @@ export function analyse_expression(
 
     case "reference": {
       const variable_id = resolve_reference(exp.identifier, context.scope);
-      const { type_id } = nullthrows(gb.variables.get(variable_id));
+      const { type_id } = gb.get_variable(variable_id);
       return {
         type: "reference",
         variable_id,
