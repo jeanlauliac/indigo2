@@ -49,13 +49,13 @@ class Dynamic<T> {
       initial_value: this.value_,
       release: () => {
         this.subscribers.delete(token);
-      }
+      },
     };
   }
 
   set(new_value: T) {
     this.value_ = new_value;
-    this.subscribers.forEach(sb => sb(new_value));
+    this.subscribers.forEach((sb) => sb(new_value));
   }
 }
 
@@ -147,10 +147,18 @@ function evaluate_function(
   graph: Graph,
   function_id: number,
   outer_scope: EvalScope | null,
-  args: any[]
+  args: EvalResult[]
 ): EvalResult {
   const func = nullthrows(graph.functions.get(function_id));
   const scope: EvalScope = { outer: outer_scope, variables_by_id: new Map() };
+
+  if (func.arguments.length !== args.length) {
+    throw new Error("number of arguments does not match");
+  }
+  for (const [i, arg] of func.arguments.entries()) {
+    const vr = new Variable(args[i]);
+    scope.variables_by_id.set(arg.variable_id, vr);
+  }
 
   for (const statement of func.statements) {
     switch (statement.type) {
@@ -177,10 +185,16 @@ function create_DOM_element(graph: Graph, value: RuntimeElement): HTMLElement {
     el.setAttribute(name, attr_val);
   }
   for (const [name, closure] of value.event_listeners) {
-    el.addEventListener(name, ev => {
-      let args: any[] = [];
+    el.addEventListener(name, (ev) => {
+      let args: EvalResult[] = [];
       if (name === "input") {
-        args = [(ev.target as any).value];
+        const value = (ev.target as any).value as string;
+        args = [
+          {
+            type: "static",
+            value: { type: "string", value },
+          },
+        ];
       }
       evaluate_function(graph, closure.function_id, closure.scope, args);
     });
@@ -196,7 +210,7 @@ function create_DOM_node(graph: Graph, result: EvalResult): Node {
 
   const value = (() => {
     if (result.type === "static") return result.value;
-    return result.value.subscribe(new_value => {
+    return result.value.subscribe((new_value) => {
       const set_text = (str: string) => {
         if (el.type === "text") {
           el.value.textContent = str;
@@ -245,7 +259,7 @@ function create_DOM_node(graph: Graph, result: EvalResult): Node {
     case "integer":
       el = {
         type: "text",
-        value: document.createTextNode(value.value.toString())
+        value: document.createTextNode(value.value.toString()),
       };
       break;
 
@@ -283,7 +297,7 @@ function evaluate_expression(
         name: exp.name,
         children: [],
         attributes: new Map(),
-        event_listeners: new Map()
+        event_listeners: new Map(),
       };
       for (const child of exp.children) {
         switch (child.type) {
@@ -322,7 +336,7 @@ function evaluate_expression(
             }
             el.event_listeners.set(attr.name.substring(2), {
               function_id: value.function_id,
-              scope: value.scope
+              scope: value.scope,
             });
             break;
           }
@@ -342,7 +356,7 @@ function evaluate_expression(
     case "reference": {
       return {
         type: "dynamic",
-        value: resolve_variable(context.scope, exp.variable_id).value
+        value: resolve_variable(context.scope, exp.variable_id).value,
       };
     }
 
@@ -350,7 +364,7 @@ function evaluate_expression(
       return static_of({
         type: "closure",
         function_id: exp.function_id,
-        scope: context.scope
+        scope: context.scope,
       });
     }
 

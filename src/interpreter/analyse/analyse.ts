@@ -11,7 +11,7 @@ export function analyse(unit: UnitAst): Graph {
   return {
     types: gb.types,
     functions: gb.functions,
-    entry_point_id: nullthrows(gb.funcs_by_name.get("main"))[0]
+    entry_point_id: nullthrows(gb.funcs_by_name.get("main"))[0],
   };
 }
 
@@ -35,7 +35,7 @@ function analyse_function(
   const block = analyse_block(gb, func, {
     scope: null,
     return_type_id_hint: return_type_id,
-    function_id
+    function_id,
   });
 
   const { statements, return_expression } = block;
@@ -49,5 +49,5 @@ function analyse_function(
     );
   }
 
-  return { return_type_id, statements, return_expression };
+  return { return_type_id, statements, return_expression, arguments: [] };
 }

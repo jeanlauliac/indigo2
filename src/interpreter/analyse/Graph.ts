@@ -68,7 +68,14 @@ export type Statement = {
   variable_id: number;
 };
 
+export type Argument = {
+  name: string;
+  type_id: number;
+  variable_id: number;
+};
+
 export type Function = {
+  arguments: Argument[];
   return_type_id: number;
 } & Block;
 

@@ -12,24 +12,27 @@ export function analyse_closure(
 ): Expression {
   const function_id = gb.next_ID++;
   const scope: Scope = { outer: context.scope, vars_by_name: new Map() };
+  const args = [];
 
   for (const arg of exp.arguments) {
     const type_id = nullthrows(gb.types_by_name.get(arg.type));
     const vr = { name: arg.name, type_id, function_id };
     const var_id = gb.register_variable(vr);
     scope.vars_by_name.set(arg.name, var_id);
+    args.push({ name: arg.name, type_id, variable_id: var_id });
   }
 
   const block = analyse_block(gb, exp, {
     function_id,
     return_type_id_hint: gb.builtins.void,
-    scope
+    scope,
   });
 
   gb.functions.set(function_id, {
     statements: block.statements,
     return_expression: block.return_expression,
-    return_type_id: block.return_expression?.type_id || gb.builtins.void
+    return_type_id: block.return_expression?.type_id || gb.builtins.void,
+    arguments: args,
   });
 
   return { type: "closure", function_id, type_id: gb.builtins.func };
