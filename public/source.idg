@@ -11,6 +11,7 @@ fn main() -> elem {
   let colored_name = <span style="color: blue">{name}</span>;
 
   <p class="foo">
+    <span>blah</span>
     {input}
     Hello, {colored_name}.
   </p>
