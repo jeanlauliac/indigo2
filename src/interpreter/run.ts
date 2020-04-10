@@ -12,8 +12,8 @@ type Closure = {
 type RuntimeElement = {
   name: string;
   children: EvalResult[];
-  attributes: Map<string, string>;
-  event_listeners: Map<string, Closure>;
+  attributes: Map<string, EvalResult>;
+  // event_listeners: Map<string, Closure>;
 };
 
 type RuntimeValue =
@@ -32,6 +32,8 @@ type RuntimeValue =
   | { type: "closure"; function_id: number; scope: EvalScope };
 
 type Subscriber<T> = (new_value: T) => void;
+type Releaser = () => void;
+type Subscription<T> = { initial_value: T; release: Releaser };
 class Dynamic<T> {
   private value_: T;
   private subscribers: Map<{}, Subscriber<T>> = new Map();
@@ -40,9 +42,7 @@ class Dynamic<T> {
     this.value_ = init_value;
   }
 
-  subscribe(
-    subscriber: Subscriber<T>
-  ): { initial_value: T; release: () => void } {
+  subscribe(subscriber: Subscriber<T>): Subscription<T> {
     const token = {};
     this.subscribers.set(token, subscriber);
     return {
@@ -140,7 +140,8 @@ export function run(sourceCode: string, element: HTMLElement) {
   const graph = analyse(ast);
 
   const returned = evaluate_function(graph, graph.entry_point_id, null, []);
-  element.appendChild(create_DOM_node(graph, returned));
+  const { initial_value } = create_DOM_node(graph, returned);
+  element.appendChild(initial_value);
 }
 
 function evaluate_function(
@@ -176,104 +177,176 @@ function evaluate_function(
   return evaluate_expression(func.return_expression, context);
 }
 
-function create_DOM_element(graph: Graph, value: RuntimeElement): HTMLElement {
+function create_DOM_element(
+  graph: Graph,
+  value: RuntimeElement
+): Subscription<HTMLElement> {
+  const releasers: Releaser[] = [];
   const el = document.createElement(value.name);
   for (const child of value.children) {
-    el.appendChild(create_DOM_node(graph, child));
+    const { initial_value, release } = create_DOM_node(graph, child);
+    el.appendChild(initial_value);
+    releasers.push(release);
   }
-  for (const [name, attr_val] of value.attributes) {
-    el.setAttribute(name, attr_val);
-  }
-  for (const [name, closure] of value.event_listeners) {
-    el.addEventListener(name, (ev) => {
-      let args: EvalResult[] = [];
-      if (name === "input") {
-        const value = (ev.target as any).value as string;
-        args = [
-          {
-            type: "static",
-            value: { type: "string", value },
-          },
-        ];
+  let value_attr_value: string | void;
+  for (const [name, attr_res] of value.attributes) {
+    let current_listener: EventListener | void;
+    const set_attr = (value: RuntimeValue) => {
+      if (name.startsWith("on")) {
+        const event_type = name.substring(2);
+        if (value.type !== "closure") {
+          throw new Error(`expected closure for event handler "${name}"`);
+        }
+        if (current_listener != null) {
+          el.removeEventListener(event_type, current_listener);
+        }
+
+        current_listener = (ev) => {
+          let args: EvalResult[] = [];
+          if (event_type === "input") {
+            const value = (ev.target as any).value as string;
+            args = [
+              {
+                type: "static",
+                value: { type: "string", value },
+              },
+            ];
+          }
+          evaluate_function(graph, value.function_id, value.scope, args);
+          if (event_type === "input" && value_attr_value != null) {
+            (el as HTMLInputElement).value = value_attr_value;
+          }
+        };
+        el.addEventListener(event_type, current_listener);
+        return;
       }
-      evaluate_function(graph, closure.function_id, closure.scope, args);
-    });
+      const attr_value = (() => {
+        switch (value.type) {
+          case "closure":
+          case "void":
+          case "element":
+            throw new Error("invalid value for html attribute");
+
+          case "string":
+            return value.value;
+
+          case "integer":
+            return value.value.toString();
+        }
+      })();
+      el.setAttribute(name, attr_value);
+      if (name === "value") value_attr_value = attr_value;
+    };
+    const { initial_value, release } = get_or_subscribe(attr_res, set_attr);
+    releasers.push(release);
+    set_attr(initial_value);
   }
 
-  return el;
+  return { initial_value: el, release: create_release(releasers) };
 }
 
-function create_DOM_node(graph: Graph, result: EvalResult): Node {
+function create_release(releasers: Releaser[]) {
+  releasers = releasers.filter((release) => release !== NO_OP);
+  if (releasers.length === 0) return NO_OP;
+  return () => releasers.forEach((release) => release());
+}
+
+function get_or_subscribe(
+  res: EvalResult,
+  subscriber: (v: RuntimeValue) => void
+): Subscription<RuntimeValue> {
+  switch (res.type) {
+    case "static":
+      return { initial_value: res.value, release: NO_OP };
+
+    case "dynamic":
+      return res.value.subscribe(subscriber);
+
+    default:
+      exhaustive(res);
+  }
+}
+
+function create_DOM_node(graph: Graph, result: EvalResult): Subscription<Node> {
   let el:
-    | { type: "element"; value: HTMLElement }
+    | { type: "element"; value: HTMLElement; release: Releaser }
     | { type: "text"; value: Text };
 
-  const value = (() => {
-    if (result.type === "static") return result.value;
-    return result.value.subscribe((new_value) => {
-      const set_text = (str: string) => {
-        if (el.type === "text") {
-          el.value.textContent = str;
-          return;
-        }
-        const node = document.createTextNode(str);
-        el.value.replaceWith(node);
-        el = { type: "text", value: node };
-      };
-
-      switch (new_value.type) {
-        case "element":
-          const new_el = create_DOM_element(graph, new_value);
-          el.value.replaceWith(new_el);
-          el = { type: "element", value: new_el };
-          break;
-
-        case "string":
-          set_text(new_value.value);
-          break;
-        case "integer":
-          set_text(new_value.value.toString());
-          break;
-        case "void":
-          set_text("");
-          break;
-
-        case "closure":
-          throw new Error("cannot render a closure as HTML");
-
-        default:
-          exhaustive(new_value);
+  const { initial_value, release } = get_or_subscribe(result, (new_value) => {
+    const set_text = (str: string) => {
+      if (el.type === "text") {
+        el.value.data = str;
+        return;
       }
-    }).initial_value;
-  })();
+      el.release();
+      const node = document.createTextNode(str);
+      el.value.replaceWith(node);
+      el = { type: "text", value: node };
+    };
 
-  switch (value.type) {
+    switch (new_value.type) {
+      case "element":
+        const { initial_value, release } = create_DOM_element(graph, new_value);
+        if (el.type === "element") el.release();
+        el.value.replaceWith(initial_value);
+        el = { type: "element", value: initial_value, release };
+        break;
+
+      case "string":
+        set_text(new_value.value);
+        break;
+      case "integer":
+        set_text(new_value.value.toString());
+        break;
+      case "void":
+        set_text("");
+        break;
+
+      case "closure":
+        throw new Error("cannot render a closure as HTML");
+
+      default:
+        exhaustive(new_value);
+    }
+  });
+
+  switch (initial_value.type) {
     case "element":
-      el = { type: "element", value: create_DOM_element(graph, value) };
+      const { initial_value: value, release } = create_DOM_element(
+        graph,
+        initial_value
+      );
+      el = { type: "element", value, release };
       break;
 
     case "string":
-      el = { type: "text", value: document.createTextNode(value.value) };
+      el = {
+        type: "text",
+        value: document.createTextNode(initial_value.value),
+      };
       break;
 
     case "integer":
       el = {
         type: "text",
-        value: document.createTextNode(value.value.toString()),
+        value: document.createTextNode(initial_value.value.toString()),
       };
       break;
 
     case "void":
-      el = { type: "text", value: document.createTextNode("") };
-      break;
-
     case "closure":
-      throw new Error("cannot render a closure as HTML");
+      throw new Error("cannot render a closure or void as HTML");
 
     default:
-      exhaustive(value);
+      exhaustive(initial_value);
   }
-  return el.value;
+  return {
+    initial_value: el.value,
+    release: () => {
+      if (el.type === "element") el.release();
+      release();
+    },
+  };
 }
 
 function static_of(value: RuntimeValue): EvalResult {
@@ -297,7 +370,6 @@ function evaluate_expression(
         name: exp.name,
         children: [],
         attributes: new Map(),
-        event_listeners: new Map(),
       };
       for (const child of exp.children) {
         switch (child.type) {
@@ -316,39 +388,7 @@ function evaluate_expression(
       }
       for (const attr of exp.attributes) {
         const result = evaluate_expression(attr.value, context);
-        if (result.type !== "static")
-          throw new Error("cannot handle dynamic attributes");
-        const { value } = result;
-        switch (value.type) {
-          case "string": {
-            el.attributes.set(attr.name, value.value);
-            break;
-          }
-
-          case "integer": {
-            el.attributes.set(attr.name, value.value.toString());
-            break;
-          }
-
-          case "closure": {
-            if (attr.name.substring(0, 2) !== "on") {
-              throw new Error("closure can only be set on event attributes");
-            }
-            el.event_listeners.set(attr.name.substring(2), {
-              function_id: value.function_id,
-              scope: value.scope,
-            });
-            break;
-          }
-
-          case "element":
-          case "void": {
-            throw new Error("cannot set element as attribute value");
-          }
-
-          default:
-            exhaustive(value);
-        }
+        el.attributes.set(attr.name, result);
       }
       return static_of(el);
     }

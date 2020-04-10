@@ -5,10 +5,10 @@ fn main() -> elem {
     <input
       type="text"
       oninput={ |value: str| { name = value } }
-      value="wef">
+      value={name}>
     </input>;
 
-  let colored_name = <span style = "color: red">{name}</ span>;
+  let colored_name = <span style="color: blue">{name}</span>;
 
   <p class="foo">
     {input}
