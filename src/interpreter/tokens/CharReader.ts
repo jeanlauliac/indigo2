@@ -1,5 +1,7 @@
 import { Location } from "./Token";
 
+const SPACE_REGEX = /^[ \t\n]$/;
+
 export class CharReader {
   readonly source_code: string;
   private _position: number = 0;
@@ -13,8 +15,13 @@ export class CharReader {
     return this._position;
   }
 
-  discard_whitespace() {
-    while (!this.eos() && /^[ \t\n]$/.test(this.chr())) this.forward();
+  discard_whitespace(): boolean {
+    let did_discard = false;
+    while (!this.eos() && SPACE_REGEX.test(this.chr())) {
+      did_discard = true;
+      this.forward();
+    }
+    return did_discard;
   }
 
   eos() {

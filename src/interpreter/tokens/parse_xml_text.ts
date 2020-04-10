@@ -5,36 +5,52 @@ export function parse_xml_text(
   cr: CharReader,
   token_mode: Ref<TokenMode>
 ): Token {
-  cr.discard_whitespace();
+  let has_front_space = cr.discard_whitespace();
   if (cr.eos()) {
     throw new Error("unexpected end of stream within XML text");
   }
   const location = cr.loc();
   if (cr.chr() === "<") {
+    if (has_front_space) {
+      return {
+        type: "xml_text",
+        value: "",
+        location,
+        has_front_space,
+        has_trailing_space: false,
+      };
+    }
     cr.forward();
     token_mode.val = "normal";
     return { type: "operator", value: "<", location };
   }
   if (cr.chr() === "{") {
+    if (has_front_space) {
+      return {
+        type: "xml_text",
+        value: "",
+        location,
+        has_front_space,
+        has_trailing_space: false,
+      };
+    }
     cr.forward();
     token_mode.val = "normal";
     return { type: "operator", value: "{", location };
   }
   let value = "";
-  let needs_space = false;
+  let has_trailing_space = false;
   while (!cr.eos() && !/^[{<]$/.test(cr.chr())) {
-    if (needs_space) value += " ";
-    needs_space = false;
+    if (has_trailing_space) value += " ";
     value += cr.chr();
     cr.forward();
-    if (/^[ \t\n]$/.test(cr.chr())) {
-      needs_space = true;
-      cr.discard_whitespace();
-      continue;
-    }
+    has_trailing_space = cr.discard_whitespace();
   }
-  if (cr.chr() === "{" && needs_space) {
-    value += " ";
-  }
-  return { type: "xml_text", value, location };
+  return {
+    type: "xml_text",
+    value,
+    location,
+    has_front_space,
+    has_trailing_space,
+  };
 }

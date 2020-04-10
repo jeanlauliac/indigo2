@@ -1,19 +1,17 @@
 
 fn main() -> elem {
   let name = "world";
-  let input =
-    <input
-      type="text"
-      oninput={ |value: str| { name = value } }
-      value={name}>
-    </input>;
-
-  let colored_name = <span style="color: blue">{name}</span>;
 
   <p class="foo">
-    <span>blah</span>
-    {input}
-    Hello, {colored_name}.
+    <form>
+      <input
+        type="text"
+        oninput={ |value: str| { name = value } }
+        value={name}>
+      </input>
+    </form>
+    <p>
+      Hello, <span style="color: blue">{name}</span>.
+    </p>
   </p>
 }
-

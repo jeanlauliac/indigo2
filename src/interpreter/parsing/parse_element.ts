@@ -6,6 +6,12 @@ import { parse_string } from "./parse_string";
 export function parse_element(tr: TokenReader): ExpressionAst | null {
   if (!tr.has_op("<")) return null;
   tr.forward();
+  const exp = parse_element_body(tr);
+  tr.forward();
+  return exp;
+}
+
+function parse_element_body(tr: TokenReader): ExpressionAst {
   const name = tr.get_identifier();
   tr.forward();
   const attributes = [];
@@ -21,28 +27,54 @@ export function parse_element(tr: TokenReader): ExpressionAst | null {
   if (!tr.has_op(">")) throw tr.token_err('expected ">"');
 
   const children: ElementChildAst[] = [];
+  let pending_text: { value: string; has_trailing_space: boolean } | void;
+
+  const process_pending_text = () => {
+    if (pending_text == null) return;
+    if (pending_text.has_trailing_space) pending_text.value += " ";
+    children.push({ type: "text", value: pending_text.value });
+    pending_text = undefined;
+  };
 
   do {
     tr.token_mode = "xml_text";
     tr.forward();
 
-    if (tr.has_op("<")) break;
     if (tr.token.type === "xml_text") {
-      children.push({ type: "text", value: tr.token.value });
+      let { value, has_front_space, has_trailing_space } = tr.token;
+      if (children.length > 0 && has_front_space) {
+        value = " " + value;
+      }
+      pending_text = { value, has_trailing_space };
+      // pending_text = tr.token;
+      // ({ has_trailing_space } = tr.token);
+      // children.push({ type: "text", value });
       continue;
     }
+
+    if (tr.has_op("<")) {
+      tr.forward();
+      if (tr.has_op("/")) break;
+      process_pending_text();
+      children.push({ type: "expression", value: parse_element_body(tr) });
+      continue;
+    }
+
     if (tr.has_op("{")) {
       tr.forward();
       const value = parse_expression(tr);
       if (value == null) throw tr.token_err("expected expression");
+      process_pending_text();
       children.push({ type: "expression", value });
       if (!tr.has_op("}")) throw tr.token_err('expected "}"');
       continue;
     }
   } while (tr.token.type !== "end");
 
-  if (!tr.has_op("<")) throw tr.token_err('expected "<"');
-  tr.forward();
+  if (pending_text != null) {
+    children.push({ type: "text", value: pending_text.value });
+  }
+
   if (!tr.has_op("/")) throw tr.token_err('expected "/"');
   tr.forward();
   const end_name = tr.get_identifier();
@@ -53,7 +85,6 @@ export function parse_element(tr: TokenReader): ExpressionAst | null {
     );
 
   if (!tr.has_op(">")) throw tr.token_err('expected ">"');
-  tr.forward();
 
   return { type: "element", name, children, attributes };
 }

@@ -22,7 +22,7 @@ const OPERATORS_OBJ = {
   "&": true,
   "&&": true,
   "<": true,
-  ">": true
+  ">": true,
 };
 
 export const OPERATORS = new Set(Object.keys(OPERATORS_OBJ));
@@ -31,6 +31,12 @@ export type Operator = keyof typeof OPERATORS_OBJ;
 export type Location = { row: number; column: number };
 type Locatable = {
   location: Location;
+};
+
+export type XmlTextToken = {
+  value: string;
+  has_front_space: boolean;
+  has_trailing_space: boolean;
 };
 
 export type Token = Locatable &
@@ -49,7 +55,9 @@ export type Token = Locatable &
         value: Keyword;
       }
     | { type: "operator"; value: Operator }
-    | { type: "xml_text"; value: string }
+    | ({
+        type: "xml_text";
+      } & XmlTextToken)
     | { type: "end" }
   );
 
