@@ -1,17 +1,27 @@
 
 fn main() -> elem {
   let name = "world";
+  let greeting = "Hello";
+
+  let input =
+    <input
+      type="text"
+      oninput={|value: str| { name = value }}
+      value={name}>
+    </input>;
 
   <p class="foo">
     <form>
-      <input
-        type="text"
-        oninput={ |value: str| { name = value } }
-        value={name}>
-      </input>
+      {input}
+      <button type="button" onclick={{ name = "world" }}>
+        Reset
+      </button>
+      <button type="button" onclick={{ greeting = "Bye" }}>
+        Bye!
+      </button>
     </form>
     <p>
-      Hello, <span style="color: blue">{name}</span>.
+      {greeting}, <span style="color: blue">{name}</span>.
     </p>
   </p>
 }

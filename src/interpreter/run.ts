@@ -234,8 +234,12 @@ function create_DOM_element(
             return value.value.toString();
         }
       })();
-      el.setAttribute(name, attr_value);
-      if (name === "value") value_attr_value = attr_value;
+      if (name === "value") {
+        value_attr_value = attr_value;
+        (el as HTMLInputElement).value = attr_value;
+      } else {
+        el.setAttribute(name, attr_value);
+      }
     };
     const { initial_value, release } = get_or_subscribe(attr_res, set_attr);
     releasers.push(release);
