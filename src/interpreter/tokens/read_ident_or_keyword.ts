@@ -1,7 +1,7 @@
 import { Token, is_alpha, is_numeric, Keyword, KEYWORDS } from "./Token";
 import { CharReader } from "./CharReader";
 
-export function parse_ident_or_keyword(cr: CharReader): Token | null {
+export function read_ident_or_keyword(cr: CharReader): Token | null {
   if (!is_alpha(cr.chr())) return null;
 
   let location = cr.loc();

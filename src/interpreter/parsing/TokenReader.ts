@@ -8,7 +8,7 @@ export class TokenReader {
 
   constructor(source_code: string) {
     this.tokenizer = new Tokenizer(source_code);
-    this.token_ = this.tokenizer.parse_token();
+    this.token_ = this.tokenizer.read_token();
   }
 
   get token(): Readonly<Token> {
@@ -20,7 +20,7 @@ export class TokenReader {
   }
 
   forward() {
-    this.token_ = this.tokenizer.parse_token();
+    this.token_ = this.tokenizer.read_token();
   }
 
   has_kw(value: Keyword) {
@@ -40,7 +40,7 @@ export class TokenReader {
   token_err(message: string): Error {
     return new IndigoError(message, {
       type: "parse",
-      location: this.token_.location
+      location: this.token_.location,
     });
   }
 }

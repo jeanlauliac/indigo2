@@ -1,7 +1,7 @@
 import { Token, is_numeric } from "./Token";
 import { CharReader } from "./CharReader";
 
-export function parse_number(cr: CharReader): Token | null {
+export function read_number(cr: CharReader): Token | null {
   if (!is_numeric(cr.chr())) return null;
 
   const location = cr.loc();

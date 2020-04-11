@@ -1,10 +1,10 @@
 import { Token, ref, TokenMode, Ref } from "./Token";
 import { CharReader } from "./CharReader";
-import { parse_number } from "./parse_number";
-import { parse_string } from "./parse_string";
-import { parse_xml_text } from "./parse_xml_text";
-import { parse_ident_or_keyword } from "./parse_ident_or_keyword";
-import { parse_operator } from "./parse_operator";
+import { read_number } from "./read_number";
+import { read_string } from "./read_string";
+import { read_xml_text } from "./read_xml_text";
+import { read_ident_or_keyword } from "./read_ident_or_keyword";
+import { read_operator } from "./read_operator";
 
 export class Tokenizer {
   private readonly cr: CharReader;
@@ -14,9 +14,9 @@ export class Tokenizer {
     this.cr = new CharReader(source_code);
   }
 
-  parse_token(): Token {
+  read_token(): Token {
     if (this.token_mode.val === "xml_text") {
-      return parse_xml_text(this.cr, this.token_mode);
+      return read_xml_text(this.cr, this.token_mode);
     }
 
     do this.cr.discard_whitespace();
@@ -26,10 +26,10 @@ export class Tokenizer {
       return { type: "end", location };
     }
     let token: Token | null;
-    if ((token = parse_ident_or_keyword(this.cr))) return token;
-    if ((token = parse_operator(this.cr))) return token;
-    if ((token = parse_string(this.cr))) return token;
-    if ((token = parse_number(this.cr))) return token;
+    if ((token = read_ident_or_keyword(this.cr))) return token;
+    if ((token = read_operator(this.cr))) return token;
+    if ((token = read_string(this.cr))) return token;
+    if ((token = read_number(this.cr))) return token;
 
     throw new Error(`unexpected character "${this.cr.chr()}"`);
   }

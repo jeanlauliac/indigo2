@@ -2,7 +2,7 @@ import { CharReader } from "./CharReader";
 import { Token } from "./Token";
 import { IndigoError } from "../IndigoError";
 
-export function parse_string(cr: CharReader): Token | null {
+export function read_string(cr: CharReader): Token | null {
   if (cr.chr() !== '"') return null;
 
   const location = cr.loc();
@@ -18,7 +18,7 @@ export function parse_string(cr: CharReader): Token | null {
   if (cr.eos()) {
     throw new IndigoError("unterminated quoted string", {
       type: "parse",
-      location
+      location,
     });
   }
 

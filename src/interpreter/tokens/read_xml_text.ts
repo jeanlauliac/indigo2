@@ -1,7 +1,7 @@
 import { Token, TokenMode, Ref } from "./Token";
 import { CharReader } from "./CharReader";
 
-export function parse_xml_text(
+export function read_xml_text(
   cr: CharReader,
   token_mode: Ref<TokenMode>
 ): Token {

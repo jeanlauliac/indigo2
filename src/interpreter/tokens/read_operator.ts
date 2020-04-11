@@ -11,7 +11,7 @@ const PARTIAL_OPERATORS = (() => {
   return result;
 })();
 
-export function parse_operator(cr: CharReader): Token | null {
+export function read_operator(cr: CharReader): Token | null {
   if (!PARTIAL_OPERATORS.has(cr.chr())) return null;
   const location = cr.loc();
   let value = cr.chr();
