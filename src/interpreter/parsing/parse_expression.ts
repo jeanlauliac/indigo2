@@ -1,8 +1,8 @@
-import { ExpressionAst, ElementChildAst } from "./UnitAst";
+import { ExpressionAst } from "./UnitAst";
 import { TokenReader } from "./TokenReader";
-import { parse_block } from "./parse_block";
 import { parse_string } from "./parse_string";
 import { parse_element } from "./parse_element";
+import { parse_closure } from "./parse_closure";
 
 export function parse_expression(tr: TokenReader): ExpressionAst | null {
   const target = parse_primary_expression(tr);
@@ -41,31 +41,4 @@ export function parse_primary_expression(
   if ((exp = parse_element(tr))) return exp;
   if ((exp = parse_closure(tr))) return exp;
   return null;
-}
-
-function parse_closure(tr: TokenReader): ExpressionAst | null {
-  if (!tr.has_op("|")) {
-    const block = parse_block(tr);
-    if (block == null) return null;
-    return { type: "closure", arguments: [], ...block };
-  }
-  tr.forward();
-  const args = [];
-  while (!tr.has_op("|")) {
-    const name = tr.get_identifier();
-    tr.forward();
-    if (!tr.has_op(":")) throw tr.token_err('expected ":"');
-    tr.forward();
-    const type = tr.get_identifier();
-    tr.forward();
-    args.push({ name, type });
-    if (tr.has_op(",")) tr.forward();
-    else if (!tr.has_op("|")) throw tr.token_err("unexpected token");
-  }
-  tr.forward();
-
-  const block = parse_block(tr);
-  if (block == null) throw tr.token_err("expected block");
-
-  return { type: "closure", arguments: args, ...block };
 }

@@ -13,10 +13,10 @@ fn main() -> elem {
   <p class="foo">
     <form>
       {input}
-      <button type="button" onclick={{ name = "world" }}>
+      <button type="button" onclick={|| { name = "world" }}>
         Reset
       </button>
-      <button type="button" onclick={{ greeting = "Bye" }}>
+      <button type="button" onclick={|| { greeting = "Bye" }}>
         Bye!
       </button>
     </form>

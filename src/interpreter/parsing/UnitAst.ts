@@ -35,8 +35,9 @@ export type BlockAst = {
   return_expression: ExpressionAst | null;
 };
 
+export type ClosureArgument = { name: string; type: string };
 export type ClosureAst = BlockAst & {
-  arguments: { name: string; type: string }[];
+  arguments: ClosureArgument[];
 };
 
 export type StringAst = {
