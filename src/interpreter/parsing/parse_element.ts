@@ -45,10 +45,15 @@ function parse_element_body(tr: TokenReader): ExpressionAst {
       if (children.length > 0 && has_front_space) {
         value = " " + value;
       }
-      pending_text = { value, has_trailing_space };
-      // pending_text = tr.token;
-      // ({ has_trailing_space } = tr.token);
-      // children.push({ type: "text", value });
+      if (pending_text == null) {
+        pending_text = { value, has_trailing_space };
+        continue;
+      }
+      if (pending_text.has_trailing_space) {
+        pending_text.value += " ";
+      }
+      pending_text.value += value;
+      pending_text.has_trailing_space = has_trailing_space;
       continue;
     }
 
@@ -62,6 +67,9 @@ function parse_element_body(tr: TokenReader): ExpressionAst {
 
     if (tr.has_op("{")) {
       tr.forward();
+      if (tr.has_op("}")) {
+        continue;
+      }
       const value = parse_expression(tr);
       if (value == null) throw tr.token_err("expected expression");
       process_pending_text();
