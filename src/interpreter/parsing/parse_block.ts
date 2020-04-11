@@ -27,6 +27,8 @@ export function parse_block(tr: TokenReader): BlockAst | null {
       statements.push({ type: "expression", expression });
     } else if (tr.has_op("}")) {
       return_expression = expression;
+    } else {
+      throw new Error('expected ";" or "}" after expression');
     }
   }
 

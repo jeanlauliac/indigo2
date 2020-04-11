@@ -35,17 +35,44 @@ export class Tokenizer {
   }
 
   private discard_comment(): boolean {
-    if (
-      this.cr.eos() ||
-      this.cr.chr() !== "/" ||
-      this.cr.position >= this.cr.source_code.length - 1 ||
-      this.cr.source_code[this.cr.position + 1] !== "/"
-    )
-      return false;
-    this.cr.forward();
-    this.cr.forward();
+    if (this.cr.eos() || this.cr.chr() !== "/") return false;
+    if (this.cr.position + 1 >= this.cr.source_code.length) return false;
 
-    while (this.cr.chr() !== "\n") this.cr.forward();
-    return true;
+    if (this.cr.source_code[this.cr.position + 1] === "/") {
+      this.cr.forward();
+      this.cr.forward();
+
+      while (this.cr.chr() !== "\n") this.cr.forward();
+      return true;
+    }
+
+    if (this.cr.source_code[this.cr.position + 1] === "*") {
+      this.cr.forward();
+      this.cr.forward();
+
+      let nesting = 1;
+      while (this.cr.position + 1 < this.cr.source_code.length && nesting > 0) {
+        if (
+          this.cr.chr() === "*" &&
+          this.cr.source_code[this.cr.position + 1] === "/"
+        ) {
+          --nesting;
+          this.cr.forward();
+        }
+
+        if (
+          this.cr.chr() === "/" &&
+          this.cr.source_code[this.cr.position + 1] === "*"
+        ) {
+          ++nesting;
+          this.cr.forward();
+        }
+
+        this.cr.forward();
+      }
+      return true;
+    }
+
+    return false;
   }
 }

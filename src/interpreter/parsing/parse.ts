@@ -21,6 +21,8 @@ class Parser {
       let fn = this.parse_function();
       if (fn != null) {
         functions.push(fn);
+      } else {
+        throw new Error("expected function declaration");
       }
     }
 
