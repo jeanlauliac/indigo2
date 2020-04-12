@@ -43,6 +43,7 @@ export type Expression = Typed &
         target_id: number;
         value: Expression;
       }
+    | { type: "function_call"; target: Expression; arguments: Expression[] }
   );
 
 export type Block = {

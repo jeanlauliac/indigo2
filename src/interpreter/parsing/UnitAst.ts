@@ -63,13 +63,19 @@ export type AssignmentAst = {
   value: ExpressionAst;
 };
 
+export type FunctionCallAst = {
+  target: ExpressionAst;
+  arguments: ExpressionAst[];
+};
+
 export type ExpressionAst =
   | ({ type: "string" } & StringAst)
   | ({ type: "number" } & NumberAst)
   | ({ type: "reference" } & ReferenceAst)
   | ({ type: "closure" } & ClosureAst)
   | ({ type: "element" } & ElementAst)
-  | ({ type: "assignment" } & AssignmentAst);
+  | ({ type: "assignment" } & AssignmentAst)
+  | ({ type: "function_call" } & FunctionCallAst);
 
 export type UnitAst = {
   functions: FunctionAst[];

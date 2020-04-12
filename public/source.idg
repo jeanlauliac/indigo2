@@ -25,3 +25,7 @@ fn main() -> elem {
     </p>
   </p>
 }
+
+fn colored(name: str) -> elem {
+  <span style="color: blue">{"name"}</span>
+}

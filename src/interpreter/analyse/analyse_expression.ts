@@ -5,6 +5,7 @@ import { Expression } from "./Graph";
 import { analyse_number } from "./analyse_number";
 import { analyse_assignment, resolve_reference } from "./analyse_assignment";
 import { analyse_closure } from "./analyse_closure";
+import { analyse_function_call } from "./analyse_function_call";
 
 export type ExpressionContext = {
   type_hint_id: number;
@@ -27,7 +28,7 @@ export function analyse_expression(
       return {
         type: "string",
         type_id: gb.builtins.str,
-        value: exp.value
+        value: exp.value,
       };
 
     case "number":
@@ -42,7 +43,7 @@ export function analyse_expression(
       return {
         type: "reference",
         variable_id,
-        type_id
+        type_id,
       };
     }
 
@@ -51,6 +52,9 @@ export function analyse_expression(
 
     case "assignment":
       return analyse_assignment(gb, exp, context);
+
+    case "function_call":
+      return analyse_function_call(gb, exp, context);
 
     default:
       exhaustive(exp);
@@ -66,15 +70,15 @@ function analyse_element(
     type: "element",
     type_id: gb.builtins.elem,
     name: exp.name,
-    attributes: exp.attributes.map(attr => {
+    attributes: exp.attributes.map((attr) => {
       const value = analyse_expression(gb, attr.value, {
         ...context,
-        type_hint_id: gb.builtins.str
+        type_hint_id: gb.builtins.str,
       });
       return { name: attr.name, value };
     }),
     // eslint-disable-next-line
-    children: exp.children.map(child => {
+    children: exp.children.map((child) => {
       switch (child.type) {
         case "text":
           return child;
@@ -84,13 +88,13 @@ function analyse_element(
             type: "expression",
             value: analyse_expression(gb, child.value, {
               ...context,
-              type_hint_id: gb.builtins.str
-            })
+              type_hint_id: gb.builtins.str,
+            }),
           };
 
         default:
           exhaustive(child);
       }
-    })
+    }),
   };
 }

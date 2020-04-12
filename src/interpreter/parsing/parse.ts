@@ -38,8 +38,29 @@ class Parser {
     this.tr.forward();
     if (!this.tr.has_op("(")) throw this.tr.token_err('expected operator "("');
     this.tr.forward();
-    if (!this.tr.has_op(")")) throw this.tr.token_err('expected operator ")"');
+
+    let args = [];
+    while (this.tr.token.type === "identifier") {
+      const name = this.tr.get_identifier();
+      this.tr.forward();
+      if (!this.tr.has_op(":"))
+        throw this.tr.token_err('expected operator ":"');
+      this.tr.forward();
+      const type_name = this.tr.get_identifier();
+      this.tr.forward();
+
+      args.push({ name, type_name });
+      if (this.tr.has_op(",")) {
+        this.tr.forward();
+      } else if (!this.tr.has_op(")")) {
+        throw this.tr.token_err("invalid token");
+      }
+    }
+    if (!this.tr.has_op(")")) {
+      throw new Error('expected closing parenthese ")');
+    }
     this.tr.forward();
+
     if (!this.tr.has_op("->"))
       throw this.tr.token_err('expected operator "->"');
     this.tr.forward();

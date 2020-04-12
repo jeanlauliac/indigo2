@@ -419,6 +419,10 @@ function evaluate_expression(
       return result;
     }
 
+    case "function_call": {
+      throw new Error("not impl");
+    }
+
     default:
       exhaustive(exp);
   }

@@ -5,7 +5,7 @@ import { parse_element } from "./parse_element";
 import { parse_closure } from "./parse_closure";
 
 export function parse_expression(tr: TokenReader): ExpressionAst | null {
-  const target = parse_primary_expression(tr);
+  const target = parse_function_call(tr);
   if (target == null) return null;
   if (!tr.has_op("=")) return target;
   if (target.type !== "reference")
@@ -16,6 +16,31 @@ export function parse_expression(tr: TokenReader): ExpressionAst | null {
   if (value == null) throw tr.token_err('expected expression after "="');
 
   return { type: "assignment", target, value };
+}
+
+export function parse_function_call(tr: TokenReader): ExpressionAst | null {
+  const target = parse_primary_expression(tr);
+  if (target == null) return null;
+
+  if (!tr.has_op("(")) return target;
+  tr.forward();
+
+  let args = [];
+  let exp: ExpressionAst | null;
+  while ((exp = parse_expression(tr))) {
+    args.push(exp);
+    if (tr.has_op(",")) {
+      tr.forward();
+    } else if (!tr.has_op(")")) {
+      throw tr.token_err("invalid token");
+    }
+  }
+  if (!tr.has_op(")")) {
+    throw new Error('expected closing parenthese ")');
+  }
+  tr.forward();
+
+  return { type: "function_call", target, arguments: args };
 }
 
 export function parse_primary_expression(
