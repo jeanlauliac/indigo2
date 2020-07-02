@@ -131,6 +131,7 @@ type EvalScope = {
 
 type EvalContext = {
   scope: EvalScope;
+  graph: Graph;
 };
 
 const VOID: EvalResult = static_of({ type: "void" });
@@ -139,7 +140,18 @@ export function run(sourceCode: string, element: HTMLElement) {
   const ast = parse(sourceCode);
   const graph = analyse(ast);
 
-  const returned = evaluate_function(graph, graph.entry_point_id, null, []);
+  const scope = { outer_scope: null, variables_by_id: new Map() };
+  for (const var_ of graph.global_variables) {
+    scope.variables_by_id.set(
+      var_,
+      new Variable({
+        type: "static",
+        value: { type: "closure", scope, function_id },
+      })
+    );
+  }
+
+  const returned = evaluate_function(graph, graph.entry_point_id, scope, []);
   const { initial_value } = create_DOM_node(graph, returned);
   element.appendChild(initial_value);
 }
@@ -147,7 +159,7 @@ export function run(sourceCode: string, element: HTMLElement) {
 function evaluate_function(
   graph: Graph,
   function_id: number,
-  outer_scope: EvalScope | null,
+  outer_scope: EvalScope,
   args: EvalResult[]
 ): EvalResult {
   const func = nullthrows(graph.functions.get(function_id));
@@ -161,19 +173,27 @@ function evaluate_function(
     scope.variables_by_id.set(arg.variable_id, vr);
   }
 
+  const context = { graph, scope };
+
   for (const statement of func.statements) {
     switch (statement.type) {
       case "let": {
-        const result = evaluate_expression(statement.initial_value, { scope });
+        const result = evaluate_expression(statement.initial_value, context);
         scope.variables_by_id.set(statement.variable_id, new Variable(result));
         break;
       }
+
+      case "expression": {
+        evaluate_expression(statement.value, context);
+        break;
+      }
+
+      default:
+        exhaustive(statement);
     }
   }
 
   if (func.return_expression == null) return VOID;
-
-  const context = { scope };
   return evaluate_expression(func.return_expression, context);
 }
 
@@ -420,7 +440,20 @@ function evaluate_expression(
     }
 
     case "function_call": {
-      throw new Error("not impl");
+      let args: EvalResult[] = exp.arguments.map((arg) => {
+        return evaluate_expression(arg, context);
+      });
+      const value = evaluate_expression(exp.target, context);
+      const { initial_value } = get_or_subscribe(value, (new_value) => {});
+      if (initial_value.type !== "closure")
+        throw new Error("only functions can be called");
+
+      return evaluate_function(
+        context.graph,
+        initial_value.function_id,
+        initial_value.scope,
+        args
+      );
     }
 
     default:

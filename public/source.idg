@@ -3,6 +3,8 @@ fn main() -> elem {
   let name = "world";
   let greeting = "Hello";
 
+  colored("wef");
+
   let input =
     <input
       type="text"
@@ -27,5 +29,5 @@ fn main() -> elem {
 }
 
 fn colored(name: str) -> elem {
-  <span style="color: blue">{"name"}</span>
+  <span style="color: blue">name</span>
 }

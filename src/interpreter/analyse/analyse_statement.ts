@@ -15,7 +15,15 @@ export function analyse_statement(
   context: StatementContext
 ): Statement {
   switch (st.type) {
-    case "expression":
+    case "expression": {
+      const value = analyse_expression(gb, st.expression, {
+        scope: context.scope,
+        type_hint_id: gb.builtins.void,
+        function_id: context.function_id,
+      });
+      return { type: "expression", value };
+    }
+
     case "return":
       throw new Error();
 
@@ -23,19 +31,19 @@ export function analyse_statement(
       const initial_value = analyse_expression(gb, st.initial_value, {
         scope: context.scope,
         type_hint_id: gb.builtins.void,
-        function_id: context.function_id
+        function_id: context.function_id,
       });
       const variable_id = gb.register_variable({
         type_id: initial_value.type_id,
         name: st.name,
-        function_id: context.function_id
+        function_id: context.function_id,
       });
       context.scope.vars_by_name.set(st.name, variable_id);
       return {
         type: "let",
         name: st.name,
         variable_id,
-        initial_value
+        initial_value,
       };
     }
 

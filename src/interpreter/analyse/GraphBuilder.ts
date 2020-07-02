@@ -21,6 +21,7 @@ export class GraphBuilder {
   types_by_name: Map<string, number> = new Map();
   types: Map<number, Type> = new Map();
   functions: Map<number, Function> = new Map();
+  global_variables: number[] = [];
   private variables: Map<number, Variable> = new Map();
   builtins: BuiltinIDs;
 
@@ -35,7 +36,7 @@ export class GraphBuilder {
       i16: this.register_builtin_type(int_type("i16", true, 16)),
       i32: this.register_builtin_type(int_type("i32", true, 32)),
       elem: this.register_builtin_type({ type: "element", name: "elem" }),
-      func: this.register_builtin_type({ type: "function", name: "func" })
+      func: this.register_builtin_type({ type: "function", name: "func" }),
     };
   }
 

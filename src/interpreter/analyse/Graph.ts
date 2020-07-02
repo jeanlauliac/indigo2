@@ -1,8 +1,7 @@
-import { ExpressionAst } from "../parsing/UnitAst";
-
 export type Graph = {
   types: Map<number, Type>;
   functions: Map<number, Function>;
+  global_variables: number[];
   entry_point_id: number;
 };
 
@@ -62,12 +61,17 @@ export type Type = Named &
     | { type: "function" }
   );
 
-export type Statement = {
-  type: "let";
-  initial_value: Expression;
-  name: string;
-  variable_id: number;
-};
+export type Statement =
+  | {
+      type: "let";
+      initial_value: Expression;
+      name: string;
+      variable_id: number;
+    }
+  | {
+      type: "expression";
+      value: Expression;
+    };
 
 export type Argument = {
   name: string;

@@ -1,10 +1,15 @@
 import { Location } from "../tokens/Token";
 
+export type FunctionArgument = { name: string; type_name: string };
 export type FunctionAst = {
   name: string;
   location: Location;
   return_type: string;
-} & BlockAst;
+} & ClosureAst;
+
+export type ClosureAst = BlockAst & {
+  arguments: FunctionArgument[];
+};
 
 export type StatementAst =
   | {
@@ -33,11 +38,6 @@ type ElementAttributeAst = {
 export type BlockAst = {
   statements: StatementAst[];
   return_expression: ExpressionAst | null;
-};
-
-export type ClosureArgument = { name: string; type: string };
-export type ClosureAst = BlockAst & {
-  arguments: ClosureArgument[];
 };
 
 export type StringAst = {

@@ -39,7 +39,7 @@ class Parser {
     if (!this.tr.has_op("(")) throw this.tr.token_err('expected operator "("');
     this.tr.forward();
 
-    let args = [];
+    const args = [];
     while (this.tr.token.type === "identifier") {
       const name = this.tr.get_identifier();
       this.tr.forward();
@@ -71,6 +71,6 @@ class Parser {
     const body = parse_block(this.tr);
     if (body == null) throw this.tr.token_err("expected block");
 
-    return { name, location, return_type, ...body };
+    return { name, location, return_type, arguments: args, ...body };
   }
 }

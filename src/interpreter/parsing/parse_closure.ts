@@ -1,9 +1,9 @@
 import { TokenReader } from "./TokenReader";
-import { ExpressionAst, ClosureArgument } from "./UnitAst";
+import { ExpressionAst, FunctionArgument } from "./UnitAst";
 import { parse_block } from "./parse_block";
 
 export function parse_closure(tr: TokenReader): ExpressionAst | null {
-  let args: ClosureArgument[];
+  let args: FunctionArgument[];
   if (tr.has_op("|")) {
     tr.forward();
     args = parse_closure_args(tr);
@@ -18,7 +18,7 @@ export function parse_closure(tr: TokenReader): ExpressionAst | null {
   return { type: "closure", arguments: args, ...block };
 }
 
-function parse_closure_args(tr: TokenReader): ClosureArgument[] {
+function parse_closure_args(tr: TokenReader): FunctionArgument[] {
   const args = [];
   while (!tr.has_op("|")) {
     const name = tr.get_identifier();
@@ -27,10 +27,10 @@ function parse_closure_args(tr: TokenReader): ClosureArgument[] {
     if (!tr.has_op(":")) throw tr.token_err('expected ":"');
     tr.forward();
 
-    const type = tr.get_identifier();
+    const type_name = tr.get_identifier();
     tr.forward();
 
-    args.push({ name, type });
+    args.push({ name, type_name });
 
     if (tr.has_op(",")) tr.forward();
     else if (!tr.has_op("|")) throw tr.token_err("unexpected token");
